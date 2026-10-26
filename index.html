@@ -54,14 +54,10 @@
     <!-- Pantalla de Carga Premium -->
     <div id="loading-screen" class="fixed inset-0 z-50 flex flex-col items-center justify-center bg-gradient-to-br from-slate-900 via-brand-900 to-slate-900 transition-all duration-700">
         <div class="relative flex flex-col items-center">
-            <!-- Glow background -->
             <div class="absolute inset-0 bg-blue-500 blur-[60px] rounded-full animate-pulse-glow w-32 h-32 m-auto"></div>
-            
-            <!-- Logo Box -->
             <div class="relative z-10 bg-white/10 backdrop-blur-md border border-white/20 p-6 rounded-3xl shadow-2xl animate-float mb-8 flex items-center justify-center">
                 <i class="fa-solid fa-cube text-5xl text-white"></i>
             </div>
-            
             <h1 class="text-4xl font-bold text-white tracking-wider mb-3 relative z-10">STOCKIA</h1>
             <p class="text-blue-200 font-medium tracking-wide relative z-10 animate-pulse">Cada venta cuenta.</p>
         </div>
@@ -78,7 +74,7 @@
                         <i class="fa-solid fa-cube text-3xl text-white"></i>
                     </div>
                     <h2 class="text-2xl font-bold text-slate-800">Bienvenido a Stockia</h2>
-                    <p class="text-slate-500 mt-1">Ingresa tus credenciales para continuar</p>
+                    <p class="text-slate-500 mt-1">Ingresa tus credenciales</p>
                 </div>
 
                 <form id="login-form" class="space-y-5" onsubmit="window.handleLogin(event)">
@@ -93,7 +89,7 @@
                         <label class="block text-sm font-medium text-slate-700 mb-1">Contraseña</label>
                         <input type="password" id="login-pass" class="w-full px-4 py-3 border border-slate-300 rounded-lg focus:ring-2 focus:ring-brand-500 outline-none transition-all" placeholder="••••••••" required>
                     </div>
-                    <button type="submit" class="w-full bg-brand-600 hover:bg-brand-700 text-white font-semibold py-3 px-4 rounded-lg transition-colors shadow-md mt-4">Ingresar al Sistema</button>
+                    <button type="submit" class="w-full bg-brand-600 hover:bg-brand-700 text-white font-semibold py-3 px-4 rounded-lg transition-colors shadow-md mt-4">Ingresar</button>
                 </form>
             </div>
         </div>
@@ -115,7 +111,6 @@
                 <div class="p-4 border-b border-slate-800">
                     <p class="text-sm text-slate-400">Usuario actual</p>
                     <p id="current-username" class="font-medium truncate mb-2">user@stockia.com</p>
-                    <!-- Botón Cambiar Contraseña (Solo Admins) -->
                     <button id="btn-change-pass" onclick="window.openChangePasswordModal()" class="hidden w-full text-left text-xs text-slate-300 hover:text-white flex items-center gap-2 py-1 px-2 rounded hover:bg-slate-800 transition-colors">
                         <i class="fa-solid fa-key"></i> Cambiar contraseña
                     </button>
@@ -150,7 +145,7 @@
     </div>
 
     <!-- Sistema de Notificaciones (Toast) -->
-    <div id="toast-container" class="fixed bottom-4 right-4 z-50 flex flex-col gap-2"></div>
+    <div id="toast-container" class="fixed bottom-4 right-4 z-50 flex flex-col gap-2 pointer-events-none"></div>
 
     <!-- Modal Base -->
     <div id="modal-backdrop" class="fixed inset-0 bg-slate-900/50 backdrop-blur-sm z-50 hidden flex items-center justify-center opacity-0 transition-opacity">
@@ -159,22 +154,118 @@
         </div>
     </div>
 
-    <!-- Lógica de la Aplicación -->
+    <!-- FIREBASE INTEGRATION -->
     <script type="module">
-        // Estado en Memoria
-        let state = {
-            users: [
-                { id: 'sa1', username: 'luis@stockia.com', password: 'Lm17@5**', role: 'superadmin' }
-            ],
-            categories: [], // {id, name}
-            products: [], // {id, categoryId, name, price, stock}
-            sales: [], // {id, sellerId, sellerName, categoryId, items:[], total, date, timestamp}
-            currentUser: null,
-            cart: [] // Para el POS del vendedor
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
+        import { getAuth, signInAnonymously } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
+        import { getFirestore, collection, addDoc, updateDoc, deleteDoc, doc, onSnapshot, setDoc } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+
+        // Configuración entregada por el usuario
+        const firebaseConfig = {
+            apiKey: "AIzaSyCnSspkKiVa9nTgpyuwgZs_HS5uHNuGTeQ",
+            authDomain: "stockia-8c34a.firebaseapp.com",
+            projectId: "stockia-8c34a",
+            storageBucket: "stockia-8c34a.firebasestorage.app",
+            messagingSenderId: "4951354221",
+            appId: "1:4951354221:web:5e2bd1fd766f0778fa8864"
         };
 
-        // Generador de IDs
-        const generateId = () => Math.random().toString(36).substr(2, 9);
+        const app = initializeApp(firebaseConfig);
+        const auth = getAuth(app);
+        const db = getFirestore(app);
+
+        // Estado global sincronizado con Firebase
+        window.state = {
+            users: [],
+            categories: [],
+            products: [],
+            sales: [],
+            currentUser: null,
+            cart: []
+        };
+
+        window.currentViewId = null; // Para recordar dónde está el usuario y recargar
+
+        // Controladores de carga
+        let loaded = { users: false, categories: false, products: false, sales: false };
+        const checkAllLoaded = () => {
+            if(loaded.users && loaded.categories && loaded.products && loaded.sales) {
+                const loader = document.getElementById('loading-screen');
+                if(!loader.classList.contains('hidden')) {
+                    loader.classList.add('fade-out');
+                    setTimeout(() => {
+                        loader.classList.add('hidden');
+                        document.getElementById('main-content').classList.remove('hidden');
+                        if(!window.state.currentUser) document.getElementById('login-view').classList.remove('hidden');
+                    }, 700);
+                }
+            }
+        };
+
+        // --- AUTENTICACIÓN FIREBASE Y LISTENERS ---
+        auth.onAuthStateChanged(user => {
+            if (user) {
+                setupRealtimeListeners();
+            } else {
+                signInAnonymously(auth).catch(console.error);
+            }
+        });
+
+        function setupRealtimeListeners() {
+            // Usuarios
+            onSnapshot(collection(db, "users"), (snapshot) => {
+                window.state.users = snapshot.docs.map(d => ({id: d.id, ...d.data()}));
+                
+                // Si la BD está limpia, crear el super admin maestro
+                if (window.state.users.length === 0) {
+                    setDoc(doc(db, "users", "superadmin_master"), {
+                        username: 'luis@stockia.com',
+                        password: 'Lm17@5**',
+                        role: 'superadmin'
+                    });
+                }
+                
+                if (window.state.currentUser) {
+                    const me = window.state.users.find(u => u.id === window.state.currentUser.id);
+                    if(me) window.state.currentUser = me; // Actualiza pass si cambió
+                }
+                
+                loaded.users = true;
+                checkAllLoaded();
+                window.reRenderCurrentView();
+            });
+
+            // Categorías
+            onSnapshot(collection(db, "categories"), (snapshot) => {
+                window.state.categories = snapshot.docs.map(d => ({id: d.id, ...d.data()}));
+                loaded.categories = true;
+                checkAllLoaded();
+                window.reRenderCurrentView();
+            });
+
+            // Productos
+            onSnapshot(collection(db, "products"), (snapshot) => {
+                window.state.products = snapshot.docs.map(d => ({id: d.id, ...d.data()}));
+                loaded.products = true;
+                checkAllLoaded();
+                window.reRenderCurrentView();
+            });
+
+            // Ventas
+            onSnapshot(collection(db, "sales"), (snapshot) => {
+                window.state.sales = snapshot.docs.map(d => ({id: d.id, ...d.data()}));
+                loaded.sales = true;
+                checkAllLoaded();
+                window.reRenderCurrentView();
+            });
+        }
+
+        window.reRenderCurrentView = () => {
+            if(window.state.currentUser && window.currentViewId) {
+                window.loadView(window.state.currentUser.role, window.currentViewId, true);
+                if(window.currentViewId === 'pos') document.getElementById('pos-cart').innerHTML = window.generateCartHTML();
+            }
+        };
 
         // --- SISTEMA DE TOAST ---
         window.showToast = (msg, type = 'success') => {
@@ -183,14 +274,11 @@
             const color = type === 'success' ? 'bg-green-500' : 'bg-red-500';
             const icon = type === 'success' ? 'fa-check-circle' : 'fa-circle-exclamation';
             
-            toast.className = `${color} text-white px-4 py-3 rounded-lg shadow-lg flex items-center gap-3 transform translate-y-10 opacity-0 transition-all duration-300`;
+            toast.className = `${color} text-white px-4 py-3 rounded-lg shadow-lg flex items-center gap-3 transform translate-y-10 opacity-0 transition-all duration-300 mb-2 pointer-events-auto`;
             toast.innerHTML = `<i class="fa-solid ${icon}"></i> <span>${msg}</span>`;
             
             container.appendChild(toast);
-            
-            requestAnimationFrame(() => {
-                toast.classList.remove('translate-y-10', 'opacity-0');
-            });
+            requestAnimationFrame(() => toast.classList.remove('translate-y-10', 'opacity-0'));
             
             setTimeout(() => {
                 toast.classList.add('opacity-0', 'translate-y-2');
@@ -205,7 +293,6 @@
             content.innerHTML = htmlContent;
             
             backdrop.classList.remove('hidden');
-            // Trigger reflow
             void backdrop.offsetWidth;
             backdrop.classList.remove('opacity-0');
             content.classList.remove('scale-95');
@@ -214,33 +301,29 @@
         window.closeModal = () => {
             const backdrop = document.getElementById('modal-backdrop');
             const content = document.getElementById('modal-content');
-            
             backdrop.classList.add('opacity-0');
             content.classList.add('scale-95');
-            
-            setTimeout(() => {
-                backdrop.classList.add('hidden');
-            }, 300);
+            setTimeout(() => backdrop.classList.add('hidden'), 300);
         };
 
-        // --- NAVEGACIÓN Y RENDERIZADO DE VISTAS ---
+        // --- NAVEGACIÓN ---
         const views = {
             superadmin: [
-                { id: 'sa-sedes', label: 'Gestión de Sedes (Admins)', icon: 'fa-building', render: () => renderSuperAdminSedes() }
+                { id: 'sa-sedes', label: 'Gestión de Sedes (Admins)', icon: 'fa-building', render: () => window.renderSuperAdminSedes() }
             ],
             admin: [
-                { id: 'inv', label: 'Inventario', icon: 'fa-box', render: () => renderInventory() },
-                { id: 'cat', label: 'Categorías', icon: 'fa-layer-group', render: () => renderCategories() },
-                { id: 'users', label: 'Vendedores', icon: 'fa-users', render: () => renderUsers() },
-                { id: 'rep', label: 'Reportes y Cierre', icon: 'fa-chart-pie', render: () => renderReports() }
+                { id: 'inv', label: 'Inventario', icon: 'fa-box', render: () => window.renderInventory() },
+                { id: 'cat', label: 'Categorías', icon: 'fa-layer-group', render: () => window.renderCategories() },
+                { id: 'users', label: 'Vendedores', icon: 'fa-users', render: () => window.renderUsers() },
+                { id: 'rep', label: 'Reportes y Auditoría', icon: 'fa-chart-pie', render: () => window.renderReports() }
             ],
             seller: [
-                { id: 'pos', label: 'Punto de Venta', icon: 'fa-cash-register', render: () => renderPOS() }
+                { id: 'pos', label: 'Punto de Venta', icon: 'fa-cash-register', render: () => window.renderPOS() }
             ]
         };
 
-        window.loadView = (role, viewId) => {
-            // Update active state in sidebar
+        window.loadView = (role, viewId, isSilent = false) => {
+            window.currentViewId = viewId;
             document.querySelectorAll('#sidebar-nav button').forEach(b => {
                 b.classList.remove('bg-brand-600', 'text-white', 'shadow-md');
                 b.classList.add('text-slate-300', 'hover:bg-slate-800');
@@ -253,52 +336,47 @@
 
             const view = views[role].find(v => v.id === viewId);
             if(view) {
-                document.getElementById('page-title').innerText = view.label;
+                if(!isSilent) document.getElementById('page-title').innerText = view.label;
                 document.getElementById('header-actions').innerHTML = '';
                 document.getElementById('content-area').innerHTML = view.render();
             }
         };
 
-        // --- AUTH ---
+        // --- AUTH LOCAL ---
         window.handleLogin = (e) => {
             e.preventDefault();
-            // Toma lo que escribió, lo pasa a minúscula y corta si escribió @
             const rawUser = document.getElementById('login-user').value.trim().toLowerCase().split('@')[0];
             const u = rawUser + '@stockia.com';
             const p = document.getElementById('login-pass').value.trim();
             
-            const user = state.users.find(x => x.username === u && x.password === p);
+            const user = window.state.users.find(x => x.username === u && x.password === p);
             
             if(user) {
-                state.currentUser = user;
+                window.state.currentUser = user;
                 document.getElementById('login-user').value = '';
                 document.getElementById('login-pass').value = '';
-                initApp();
+                window.initApp();
             } else {
                 window.showToast('Credenciales incorrectas', 'error');
             }
         };
 
         window.logout = () => {
-            state.currentUser = null;
+            window.state.currentUser = null;
+            window.currentViewId = null;
             document.getElementById('app-view').classList.add('hidden');
             document.getElementById('login-view').classList.remove('hidden');
         };
 
-        const initApp = () => {
-            const user = state.currentUser;
+        window.initApp = () => {
+            const user = window.state.currentUser;
             document.getElementById('login-view').classList.add('hidden');
             document.getElementById('app-view').classList.remove('hidden');
-            
             document.getElementById('current-username').innerText = user.username;
             
-            // Mostrar botón de cambio de contraseña solo a Superadmin y Admin
             const btnPass = document.getElementById('btn-change-pass');
-            if (user.role === 'superadmin' || user.role === 'admin') {
-                btnPass.classList.remove('hidden');
-            } else {
-                btnPass.classList.add('hidden');
-            }
+            if (user.role === 'superadmin' || user.role === 'admin') btnPass.classList.remove('hidden');
+            else btnPass.classList.add('hidden');
 
             let roleDisplay = '';
             if (user.role === 'superadmin') roleDisplay = 'Súper Administrador (HQ)';
@@ -307,7 +385,6 @@
             
             document.getElementById('user-role-display').innerText = roleDisplay;
 
-            // Build Navigation
             const nav = document.getElementById('sidebar-nav');
             nav.innerHTML = '';
             views[user.role].forEach(view => {
@@ -319,7 +396,6 @@
                 nav.appendChild(btn);
             });
 
-            // Load default view
             window.loadView(user.role, views[user.role][0].id);
         };
 
@@ -344,7 +420,7 @@
             `);
         };
 
-        window.saveNewPassword = (e) => {
+        window.saveNewPassword = async (e) => {
             e.preventDefault();
             const p1 = document.getElementById('new-pass').value.trim();
             const p2 = document.getElementById('confirm-pass').value.trim();
@@ -352,27 +428,26 @@
             if(p1.length < 4) return window.showToast('La contraseña debe ser más larga', 'error');
             if(p1 !== p2) return window.showToast('Las contraseñas no coinciden', 'error');
 
-            const userIndex = state.users.findIndex(u => u.id === state.currentUser.id);
-            if(userIndex > -1) {
-                state.users[userIndex].password = p1;
-                state.currentUser.password = p1;
+            try {
+                await updateDoc(doc(db, "users", window.state.currentUser.id), { password: p1 });
                 window.showToast('Contraseña actualizada con éxito');
                 window.closeModal();
+            } catch (err) {
+                window.showToast('Error al actualizar', 'error');
             }
         };
-
 
         // ==========================================
         // VISTAS SUPERADMIN
         // ==========================================
-        const renderSuperAdminSedes = () => {
+        window.renderSuperAdminSedes = () => {
             document.getElementById('header-actions').innerHTML = `
                 <button onclick="window.openSuperAdminUserModal()" class="bg-brand-600 hover:bg-brand-700 text-white px-4 py-2 rounded-lg font-medium shadow-sm transition-colors text-sm flex items-center gap-2">
                     <i class="fa-solid fa-plus"></i> Nueva Sede (Admin)
                 </button>
             `;
 
-            const admins = state.users.filter(u => u.role === 'admin');
+            const admins = window.state.users.filter(u => u.role === 'admin');
             
             let html = `
                 <div class="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden">
@@ -443,9 +518,7 @@
         // ==========================================
         // VISTAS ADMIN
         // ==========================================
-        
-        // --- INVENTARIO ---
-        const renderInventory = () => {
+        window.renderInventory = () => {
             document.getElementById('header-actions').innerHTML = `
                 <div class="flex gap-2">
                     <button onclick="window.openAuditModal()" class="bg-indigo-100 hover:bg-indigo-200 text-indigo-700 px-4 py-2 rounded-lg font-medium shadow-sm transition-colors text-sm flex items-center gap-2">
@@ -472,11 +545,11 @@
                         <tbody class="divide-y divide-slate-100">
             `;
 
-            if(state.products.length === 0) {
+            if(window.state.products.length === 0) {
                 html += `<tr><td colspan="5" class="p-8 text-center text-slate-400">No hay productos en inventario.</td></tr>`;
             } else {
-                state.products.forEach(p => {
-                    const cat = state.categories.find(c => c.id === p.categoryId) || {name: 'Sin categoría'};
+                window.state.products.forEach(p => {
+                    const cat = window.state.categories.find(c => c.id === p.categoryId) || {name: 'Sin categoría'};
                     html += `
                         <tr class="hover:bg-slate-50 transition-colors">
                             <td class="p-4 font-medium text-slate-800">${p.name}</td>
@@ -502,11 +575,11 @@
         };
 
         window.openProductModal = (id = null) => {
-            if(state.categories.length === 0) return window.showToast('Primero crea una Categoría', 'error');
+            if(window.state.categories.length === 0) return window.showToast('Primero crea una Categoría', 'error');
 
-            const p = id ? state.products.find(x => x.id === id) : {name: '', price: '', stock: '', categoryId: ''};
+            const p = id ? window.state.products.find(x => x.id === id) : {name: '', price: '', stock: '', categoryId: ''};
             
-            const catOptions = state.categories.map(c => 
+            const catOptions = window.state.categories.map(c => 
                 `<option value="${c.id}" ${p.categoryId === c.id ? 'selected' : ''}>${c.name}</option>`
             ).join('');
 
@@ -541,7 +614,7 @@
             `);
         };
 
-        window.saveProduct = (e, id) => {
+        window.saveProduct = async (e, id) => {
             e.preventDefault();
             const payload = {
                 name: document.getElementById('p-name').value,
@@ -550,28 +623,29 @@
                 stock: parseInt(document.getElementById('p-stock').value)
             };
 
-            if(id) {
-                const idx = state.products.findIndex(x => x.id === id);
-                state.products[idx] = { ...state.products[idx], ...payload };
-            } else {
-                state.products.push({ id: generateId(), ...payload });
+            try {
+                if(id) await updateDoc(doc(db, "products", id), payload);
+                else await addDoc(collection(db, "products"), payload);
+                
+                window.closeModal();
+                window.showToast('Producto guardado');
+            } catch (err) {
+                window.showToast('Error al guardar', 'error');
             }
-            
-            window.closeModal();
-            window.showToast('Producto guardado');
-            window.loadView('admin', 'inv');
         };
 
-        window.deleteProduct = (id) => {
+        window.deleteProduct = async (id) => {
             if(confirm("¿Seguro que deseas eliminar este producto?")) {
-                state.products = state.products.filter(p => p.id !== id);
-                window.showToast('Producto eliminado');
-                window.loadView('admin', 'inv');
+                try {
+                    await deleteDoc(doc(db, "products", id));
+                    window.showToast('Producto eliminado');
+                } catch (err) {
+                    window.showToast('Error al eliminar', 'error');
+                }
             }
         };
 
-        // --- CATEGORÍAS ---
-        const renderCategories = () => {
+        window.renderCategories = () => {
             document.getElementById('header-actions').innerHTML = `
                 <button onclick="window.openCategoryModal()" class="bg-brand-600 hover:bg-brand-700 text-white px-4 py-2 rounded-lg font-medium shadow-sm transition-colors text-sm flex items-center gap-2">
                     <i class="fa-solid fa-plus"></i> Nueva Categoría
@@ -580,12 +654,12 @@
 
             let html = `<div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">`;
             
-            if(state.categories.length === 0) {
+            if(window.state.categories.length === 0) {
                 html = `<div class="col-span-full p-8 text-center text-slate-400 bg-white rounded-xl border border-slate-200">No hay categorías. Crea una sección (ej. Cafetería).</div>`;
             } else {
-                state.categories.forEach(c => {
-                    const prodCount = state.products.filter(p => p.categoryId === c.id).length;
-                    const sellerCount = state.users.filter(u => u.categoryId === c.id).length;
+                window.state.categories.forEach(c => {
+                    const prodCount = window.state.products.filter(p => p.categoryId === c.id).length;
+                    const sellerCount = window.state.users.filter(u => u.categoryId === c.id).length;
                     
                     html += `
                         <div class="bg-white p-5 rounded-xl shadow-sm border border-slate-200 flex flex-col justify-between">
@@ -621,35 +695,40 @@
             `);
         };
 
-        window.saveCategory = (e) => {
+        window.saveCategory = async (e) => {
             e.preventDefault();
             const name = document.getElementById('c-name').value.trim();
-            state.categories.push({ id: generateId(), name });
-            window.closeModal();
-            window.showToast('Categoría creada');
-            window.loadView('admin', 'cat');
+            try {
+                await addDoc(collection(db, "categories"), { name });
+                window.closeModal();
+                window.showToast('Categoría creada');
+            } catch (err) {
+                window.showToast('Error al guardar', 'error');
+            }
         };
 
-        window.deleteCategory = (id) => {
-            if(state.products.some(p => p.categoryId === id)) {
-                return window.showToast('No puedes borrar una categoría con productos. Elimínalos primero.', 'error');
+        window.deleteCategory = async (id) => {
+            if(window.state.products.some(p => p.categoryId === id)) {
+                return window.showToast('No puedes borrar una categoría con productos.', 'error');
             }
             if(confirm("¿Borrar esta categoría?")) {
-                state.categories = state.categories.filter(c => c.id !== id);
-                window.showToast('Categoría eliminada');
-                window.loadView('admin', 'cat');
+                try {
+                    await deleteDoc(doc(db, "categories", id));
+                    window.showToast('Categoría eliminada');
+                } catch (err) {
+                    window.showToast('Error al eliminar', 'error');
+                }
             }
         };
 
-        // --- USUARIOS / VENDEDORES ---
-        const renderUsers = () => {
+        window.renderUsers = () => {
             document.getElementById('header-actions').innerHTML = `
                 <button onclick="window.openUserModal()" class="bg-brand-600 hover:bg-brand-700 text-white px-4 py-2 rounded-lg font-medium shadow-sm transition-colors text-sm flex items-center gap-2">
                     <i class="fa-solid fa-user-plus"></i> Nuevo Vendedor
                 </button>
             `;
 
-            const sellers = state.users.filter(u => u.role === 'seller');
+            const sellers = window.state.users.filter(u => u.role === 'seller');
             
             let html = `
                 <div class="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden">
@@ -669,7 +748,7 @@
                 html += `<tr><td colspan="4" class="p-8 text-center text-slate-400">No hay vendedores creados.</td></tr>`;
             } else {
                 sellers.forEach(u => {
-                    const cat = state.categories.find(c => c.id === u.categoryId) || {name: 'Sin asignar'};
+                    const cat = window.state.categories.find(c => c.id === u.categoryId) || {name: 'Sin asignar'};
                     html += `
                         <tr class="hover:bg-slate-50 transition-colors">
                             <td class="p-4 font-medium text-slate-800">
@@ -693,13 +772,12 @@
                     `;
                 });
             }
-
             html += `</tbody></table></div>`;
             return html;
         };
 
         window.openUserModal = () => {
-            let catOptions = state.categories.map(c => `<option value="${c.id}">${c.name}</option>`).join('');
+            let catOptions = window.state.categories.map(c => `<option value="${c.id}">${c.name}</option>`).join('');
             if(!catOptions) catOptions = '<option value="">⚠️ Crea una sección primero</option>';
             
             window.openModal(`
@@ -725,56 +803,54 @@
                         <label class="block text-sm font-medium mb-1">Contraseña Inicial</label>
                         <input type="text" id="u-pass" required class="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-brand-500 outline-none">
                     </div>
-                    <button type="submit" class="w-full bg-brand-600 text-white font-semibold py-2 rounded-lg hover:bg-brand-700" ${state.categories.length === 0 ? 'disabled opacity-50' : ''}>Crear Vendedor</button>
+                    <button type="submit" class="w-full bg-brand-600 text-white font-semibold py-2 rounded-lg hover:bg-brand-700" ${window.state.categories.length === 0 ? 'disabled opacity-50' : ''}>Crear Vendedor</button>
                 </form>
             `);
         };
 
-        window.saveUser = (e, role) => {
+        window.saveUser = async (e, role) => {
             e.preventDefault();
             const rawName = document.getElementById('u-name').value.trim().toLowerCase().split('@')[0];
             const username = rawName + '@stockia.com';
             const password = document.getElementById('u-pass').value.trim();
             
-            if(state.users.some(u => u.username === username)) return window.showToast('El usuario ya existe', 'error');
+            if(window.state.users.some(u => u.username === username)) return window.showToast('El usuario ya existe', 'error');
 
-            const payload = { id: generateId(), username, password, role };
+            const payload = { username, password, role };
+            if(role === 'seller') payload.categoryId = document.getElementById('u-cat').value;
             
-            if(role === 'seller') {
-                payload.categoryId = document.getElementById('u-cat').value;
+            try {
+                await addDoc(collection(db, "users"), payload);
+                window.closeModal();
+                window.showToast('Usuario creado con éxito');
+            } catch (err) {
+                window.showToast('Error al crear usuario', 'error');
             }
-            
-            state.users.push(payload);
-            window.closeModal();
-            window.showToast('Usuario creado con éxito');
-            
-            if(state.currentUser.role === 'superadmin') window.loadView('superadmin', 'sa-sedes');
-            else window.loadView('admin', 'users');
         };
 
-        window.deleteUser = (id) => {
-            if(confirm("¿Seguro que deseas eliminar este usuario? No podrá acceder más al sistema.")) {
-                state.users = state.users.filter(u => u.id !== id);
-                window.showToast('Usuario eliminado correctamente');
-                if(state.currentUser.role === 'superadmin') window.loadView('superadmin', 'sa-sedes');
-                else window.loadView('admin', 'users');
+        window.deleteUser = async (id) => {
+            if(confirm("¿Seguro que deseas eliminar este usuario? No podrá acceder más.")) {
+                try {
+                    await deleteDoc(doc(db, "users", id));
+                    window.showToast('Usuario eliminado correctamente');
+                } catch (err) {
+                    window.showToast('Error al eliminar', 'error');
+                }
             }
         };
 
         // --- REPORTES Y AUDITORÍAS ---
-        const renderReports = () => {
+        window.renderReports = () => {
             document.getElementById('header-actions').innerHTML = `
                 <button onclick="window.openAuditModal()" class="bg-indigo-600 hover:bg-indigo-700 text-white px-4 py-2 rounded-lg font-medium shadow-sm transition-colors text-sm flex items-center gap-2">
                     <i class="fa-solid fa-file-pdf"></i> Generar Auditoría PDF
                 </button>
             `;
 
-            // Data preparation for charts/summary
             const today = new Date().toLocaleDateString();
-            const todaySales = state.sales.filter(s => new Date(s.timestamp).toLocaleDateString() === today);
-            
+            const todaySales = window.state.sales.filter(s => new Date(s.timestamp).toLocaleDateString() === today);
             const totalToday = todaySales.reduce((sum, s) => sum + s.total, 0);
-            const totalHistorical = state.sales.reduce((sum, s) => sum + s.total, 0);
+            const totalHistorical = window.state.sales.reduce((sum, s) => sum + s.total, 0);
 
             let html = `
                 <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
@@ -792,7 +868,7 @@
 
                 <div class="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden">
                     <div class="p-4 border-b border-slate-200 bg-slate-50">
-                        <h3 class="font-bold text-slate-800">Últimas 10 Transacciones</h3>
+                        <h3 class="font-bold text-slate-800">Últimas Transacciones</h3>
                     </div>
                     <table class="w-full text-left border-collapse">
                         <thead>
@@ -806,13 +882,13 @@
                         <tbody class="divide-y divide-slate-100">
             `;
 
-            const latestSales = [...state.sales].sort((a,b) => b.timestamp - a.timestamp).slice(0, 10);
+            const latestSales = [...window.state.sales].sort((a,b) => b.timestamp - a.timestamp).slice(0, 10);
             
             if(latestSales.length === 0) {
                 html += `<tr><td colspan="4" class="p-8 text-center text-slate-400">No hay ventas registradas.</td></tr>`;
             } else {
                 latestSales.forEach(s => {
-                    const cat = state.categories.find(c => c.id === s.categoryId) || {name: 'N/A'};
+                    const cat = window.state.categories.find(c => c.id === s.categoryId) || {name: 'N/A'};
                     html += `
                         <tr class="text-sm hover:bg-slate-50">
                             <td class="p-4 text-slate-500">${s.date}</td>
@@ -828,8 +904,8 @@
         };
 
         window.openAuditModal = () => {
-            let catOptions = state.categories.map(c => `<option value="${c.id}">${c.name}</option>`).join('');
-            let sellerOptions = state.users.filter(u=>u.role==='seller').map(s => `<option value="${s.id}">${s.username}</option>`).join('');
+            let catOptions = window.state.categories.map(c => `<option value="${c.id}">${c.name}</option>`).join('');
+            let sellerOptions = window.state.users.filter(u=>u.role==='seller').map(s => `<option value="${s.id}">${s.username}</option>`).join('');
 
             window.openModal(`
                 <div class="flex justify-between items-center mb-4">
@@ -897,7 +973,7 @@
             doc.setFontSize(10);
             doc.setTextColor(100);
             doc.text(`Generado el: ${dateStr}`, 14, 28);
-            doc.text(`Generado por: ${state.currentUser.username}`, 14, 33);
+            doc.text(`Generado por: ${window.state.currentUser.username}`, 14, 33);
 
             if(type === 'inventory') {
                 doc.text("Tipo: Existencias de Inventario Actual", 14, 38);
@@ -905,8 +981,8 @@
                 let totalValue = 0;
                 let tableData = [];
                 
-                state.products.forEach(p => {
-                    const cat = state.categories.find(c => c.id === p.categoryId)?.name || 'N/A';
+                window.state.products.forEach(p => {
+                    const cat = window.state.categories.find(c => c.id === p.categoryId)?.name || 'N/A';
                     const val = p.price * p.stock;
                     totalValue += val;
                     tableData.push([p.name, cat, `$${p.price.toLocaleString()}`, p.stock, `$${val.toLocaleString()}`]);
@@ -926,21 +1002,17 @@
                 doc.text(`Valoración Total del Inventario: $${totalValue.toLocaleString()}`, 14, finalY + 10);
 
             } else {
-                // Ventas
                 const timeFilter = document.getElementById('audit-time').value;
                 const catFilter = document.getElementById('audit-cat').value;
                 const sellerFilter = document.getElementById('audit-seller').value;
 
                 doc.text(`Tipo: Historial de Ventas`, 14, 38);
-                doc.text(`Filtros: Periodo(${timeFilter}), Categ(${catFilter}), Vendedor(${sellerFilter})`, 14, 43);
-
-                let filteredSales = state.sales.filter(s => {
+                
+                let filteredSales = window.state.sales.filter(s => {
                     let match = true;
-                    // Filtro Vendedor/Categoria
                     if(catFilter !== 'all' && s.categoryId !== catFilter) match = false;
                     if(sellerFilter !== 'all' && s.sellerId !== sellerFilter) match = false;
                     
-                    // Filtro Tiempo
                     const sDate = new Date(s.timestamp);
                     if(timeFilter === 'today') {
                         if(sDate.toLocaleDateString() !== now.toLocaleDateString()) match = false;
@@ -958,37 +1030,37 @@
                 let tableData = [];
 
                 filteredSales.forEach(s => {
-                    const cat = state.categories.find(c => c.id === s.categoryId)?.name || 'N/A';
+                    const cat = window.state.categories.find(c => c.id === s.categoryId)?.name || 'N/A';
                     totalSales += s.total;
                     const itemsResumen = s.items.map(i => `${i.qty}x ${i.name}`).join(', ');
                     tableData.push([s.date, s.sellerName, cat, itemsResumen, `$${s.total.toLocaleString()}`]);
                 });
 
                 doc.autoTable({
-                    startY: 50,
+                    startY: 45,
                     head: [['Fecha/Hora', 'Vendedor', 'Categoría', 'Artículos', 'Total']],
                     body: tableData,
                     theme: 'grid',
                     headStyles: { fillColor: [79, 70, 229] }
                 });
 
-                const finalY = doc.lastAutoTable.finalY || 50;
+                const finalY = doc.lastAutoTable.finalY || 45;
                 doc.setFontSize(14);
                 doc.setTextColor(0);
                 doc.text(`Total Recaudado en periodo: $${totalSales.toLocaleString()}`, 14, finalY + 12);
             }
 
-            doc.save(`Stockia_Auditoria_${type}_${Date.now()}.pdf`);
+            doc.save(`Stockia_Auditoria_${Date.now()}.pdf`);
             window.closeModal();
-            window.showToast('Auditoría PDF generada y descargada');
+            window.showToast('Auditoría PDF generada');
         };
 
         // ==========================================
         // VISTAS VENDEDOR (POS)
         // ==========================================
-        const renderPOS = () => {
-            const seller = state.currentUser;
-            const myCat = state.categories.find(c => c.id === seller.categoryId);
+        window.renderPOS = () => {
+            const seller = window.state.currentUser;
+            const myCat = window.state.categories.find(c => c.id === seller.categoryId);
             const catName = myCat ? myCat.name : 'Sin sección asignada';
 
             document.getElementById('header-actions').innerHTML = `
@@ -999,25 +1071,23 @@
 
             let html = `
                 <div class="flex flex-col lg:flex-row gap-6 h-[calc(100vh-140px)]">
-                    <!-- Productos -->
                     <div class="flex-1 flex flex-col bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden">
                         <div class="p-4 border-b border-slate-200 bg-slate-50 flex justify-between items-center">
                             <h3 class="font-bold text-slate-800">Productos Disponibles</h3>
                             <span class="bg-brand-100 text-brand-700 px-3 py-1 rounded-full text-sm font-semibold">${catName}</span>
                         </div>
                         <div class="p-4 overflow-y-auto grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4" id="pos-products">
-                            ${generatePOSProducts(seller.categoryId)}
+                            ${window.generatePOSProducts(seller.categoryId)}
                         </div>
                     </div>
 
-                    <!-- Carrito -->
                     <div class="w-full lg:w-96 bg-white rounded-xl shadow-sm border border-slate-200 flex flex-col h-full overflow-hidden">
                         <div class="p-4 border-b border-slate-200 bg-slate-900 text-white flex justify-between items-center">
                             <h3 class="font-bold">Orden Actual</h3>
                             <button onclick="window.clearCart()" class="text-slate-400 hover:text-white text-sm"><i class="fa-solid fa-trash"></i> Vaciar</button>
                         </div>
                         <div class="flex-1 p-4 overflow-y-auto" id="pos-cart">
-                            ${generateCartHTML()}
+                            ${window.generateCartHTML()}
                         </div>
                         <div class="p-4 border-t border-slate-200 bg-slate-50">
                             <button onclick="window.checkout()" id="btn-checkout" class="w-full bg-green-600 hover:bg-green-700 text-white font-bold py-4 rounded-xl shadow-lg transition-transform active:scale-95 flex justify-between items-center px-6">
@@ -1031,8 +1101,8 @@
             return html;
         };
 
-        const generatePOSProducts = (catId) => {
-            const prods = state.products.filter(p => p.categoryId === catId);
+        window.generatePOSProducts = (catId) => {
+            const prods = window.state.products.filter(p => p.categoryId === catId);
             if(prods.length === 0) return `<div class="col-span-full text-center text-slate-400 mt-10">No hay productos en esta sección.</div>`;
             
             return prods.map(p => {
@@ -1051,13 +1121,13 @@
             }).join('');
         };
 
-        const generateCartHTML = () => {
-            if(state.cart.length === 0) return `<div class="text-center text-slate-400 mt-10"><i class="fa-solid fa-basket-shopping text-4xl mb-3 opacity-50"></i><p>El carrito está vacío</p></div>`;
+        window.generateCartHTML = () => {
+            if(window.state.cart.length === 0) return `<div class="text-center text-slate-400 mt-10"><i class="fa-solid fa-basket-shopping text-4xl mb-3 opacity-50"></i><p>El carrito está vacío</p></div>`;
             
             let total = 0;
             let html = '<ul class="space-y-3">';
-            state.cart.forEach((item, index) => {
-                const p = state.products.find(x => x.id === item.id);
+            window.state.cart.forEach((item, index) => {
+                const p = window.state.products.find(x => x.id === item.id);
                 const itemTotal = p.price * item.qty;
                 total += itemTotal;
                 html += `
@@ -1073,14 +1143,13 @@
             });
             html += '</ul>';
             
-            // Actualizar total del botón
             setTimeout(() => {
                 const btnTotal = document.getElementById('cart-total-display');
                 if(btnTotal) btnTotal.innerText = `$${total.toLocaleString()}`;
                 
                 const btnCheckout = document.getElementById('btn-checkout');
                 if(btnCheckout) {
-                    if(state.cart.length === 0) btnCheckout.classList.add('opacity-50', 'pointer-events-none');
+                    if(window.state.cart.length === 0) btnCheckout.classList.add('opacity-50', 'pointer-events-none');
                     else btnCheckout.classList.remove('opacity-50', 'pointer-events-none');
                 }
             }, 0);
@@ -1089,64 +1158,71 @@
         };
 
         window.addToCart = (id) => {
-            const p = state.products.find(x => x.id === id);
-            const cartItem = state.cart.find(x => x.id === id);
+            const p = window.state.products.find(x => x.id === id);
+            const cartItem = window.state.cart.find(x => x.id === id);
             const currentQty = cartItem ? cartItem.qty : 0;
             
             if(currentQty + 1 > p.stock) return window.showToast('Stock insuficiente', 'error');
             
             if(cartItem) cartItem.qty++;
-            else state.cart.push({ id, qty: 1 });
+            else window.state.cart.push({ id, qty: 1 });
             
-            document.getElementById('pos-cart').innerHTML = generateCartHTML();
+            document.getElementById('pos-cart').innerHTML = window.generateCartHTML();
         };
 
         window.removeFromCart = (index) => {
-            state.cart.splice(index, 1);
-            document.getElementById('pos-cart').innerHTML = generateCartHTML();
+            window.state.cart.splice(index, 1);
+            document.getElementById('pos-cart').innerHTML = window.generateCartHTML();
         };
 
         window.clearCart = () => {
-            state.cart = [];
-            document.getElementById('pos-cart').innerHTML = generateCartHTML();
+            window.state.cart = [];
+            document.getElementById('pos-cart').innerHTML = window.generateCartHTML();
         };
 
-        window.checkout = () => {
-            if(state.cart.length === 0) return;
+        window.checkout = async () => {
+            if(window.state.cart.length === 0) return;
             
             let total = 0;
             const itemsToSave = [];
             
-            // Descontar inventario
-            state.cart.forEach(item => {
-                const p = state.products.find(x => x.id === item.id);
-                p.stock -= item.qty;
+            // Preparar operaciones
+            for(let item of window.state.cart) {
+                const p = window.state.products.find(x => x.id === item.id);
+                if(!p) continue;
                 total += p.price * item.qty;
                 itemsToSave.push({ id: p.id, name: p.name, qty: item.qty, price: p.price });
-            });
+                
+                // Actualizar stock real en firebase
+                await updateDoc(doc(db, "products", p.id), { stock: p.stock - item.qty });
+            }
             
-            // Registrar Venta
+            // Guardar Venta
             const now = new Date();
-            state.sales.push({
-                id: generateId(),
-                sellerId: state.currentUser.id,
-                sellerName: state.currentUser.username,
-                categoryId: state.currentUser.categoryId,
+            const salePayload = {
+                sellerId: window.state.currentUser.id,
+                sellerName: window.state.currentUser.username,
+                categoryId: window.state.currentUser.categoryId || null,
                 items: itemsToSave,
                 total: total,
                 date: now.toLocaleDateString() + ' ' + now.toLocaleTimeString(),
                 timestamp: now.getTime()
-            });
+            };
             
-            state.cart = [];
-            window.showToast('Venta registrada con éxito');
-            window.loadView('seller', 'pos'); // Recargar para actualizar stock visual
+            try {
+                await addDoc(collection(db, "sales"), salePayload);
+                window.state.cart = [];
+                window.showToast('Venta registrada con éxito');
+                document.getElementById('pos-cart').innerHTML = window.generateCartHTML();
+            } catch (err) {
+                window.showToast('Error al registrar venta', 'error');
+            }
         };
 
         window.showSellerSales = () => {
-            const seller = state.currentUser;
+            const seller = window.state.currentUser;
             const today = new Date().toLocaleDateString();
-            const mySales = state.sales.filter(s => s.sellerId === seller.id && new Date(s.timestamp).toLocaleDateString() === today);
+            const mySales = window.state.sales.filter(s => s.sellerId === seller.id && new Date(s.timestamp).toLocaleDateString() === today);
             
             const total = mySales.reduce((sum, s) => sum + s.total, 0);
 
@@ -1184,22 +1260,6 @@
             }
             html += `</ul></div>`;
             window.openModal(html);
-        };
-
-        // --- INICIALIZACIÓN VISUAL ---
-        window.onload = () => {
-            // Simulamos la carga premium y conexión (2.5 segundos)
-            setTimeout(() => {
-                const loader = document.getElementById('loading-screen');
-                loader.classList.add('fade-out');
-                
-                setTimeout(() => {
-                    loader.classList.add('hidden');
-                    document.getElementById('main-content').classList.remove('hidden');
-                    document.getElementById('login-view').classList.remove('hidden');
-                }, 700); // Esperar que termine la transición CSS fade-out
-                
-            }, 2500);
         };
 
     </script>
