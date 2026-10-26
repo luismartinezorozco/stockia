@@ -171,6 +171,9 @@
                         <p class="text-xs text-slate-500">Administrador</p>
                     </div>
                 </div>
+                <button onclick="window.openChangePasswordModal()" class="w-full flex items-center gap-3 px-4 py-2 text-sm text-slate-300 hover:text-white hover:bg-slate-800 rounded-lg transition-colors mb-1">
+                    <i class="fa-solid fa-key w-5 text-center"></i> Cambiar Contraseña
+                </button>
                 <button onclick="window.logout()" class="w-full flex items-center gap-3 px-4 py-2 text-sm text-red-400 hover:bg-slate-800 rounded-lg transition-colors">
                     <i class="fa-solid fa-sign-out-alt w-5 text-center"></i> Cerrar Sesión
                 </button>
@@ -930,6 +933,48 @@
             window.showToast('Usuario eliminado');
         };
 
+        window.openChangePasswordModal = () => {
+            window.openModal(`
+                <div class="flex justify-between items-center mb-4">
+                    <h3 class="text-xl font-bold">Cambiar Contraseña</h3>
+                    <button onclick="window.closeModal()" class="text-slate-400 hover:text-slate-600"><i class="fa-solid fa-times"></i></button>
+                </div>
+                <form onsubmit="window.saveNewPassword(event)" class="space-y-4">
+                    <div>
+                        <label class="block text-sm font-medium mb-1">Nueva Contraseña</label>
+                        <input type="password" id="new-pass" required class="w-full px-3 py-2 border rounded-lg outline-none">
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium mb-1">Confirmar Contraseña</label>
+                        <input type="password" id="confirm-pass" required class="w-full px-3 py-2 border rounded-lg outline-none">
+                    </div>
+                    <div class="flex justify-end gap-2 mt-6">
+                        <button type="button" onclick="window.closeModal()" class="px-4 py-2 bg-slate-100 rounded-lg">Cancelar</button>
+                        <button type="submit" class="px-4 py-2 bg-brand-600 text-white rounded-lg">Actualizar</button>
+                    </div>
+                </form>
+            `);
+        };
+
+        window.saveNewPassword = async (e) => {
+            e.preventDefault();
+            const p1 = document.getElementById('new-pass').value.trim();
+            const p2 = document.getElementById('confirm-pass').value.trim();
+            
+            if (p1 !== p2) return window.showToast('Las contraseñas no coinciden', 'error');
+            if (p1.length < 6) return window.showToast('La contraseña debe tener al menos 6 caracteres', 'error');
+
+            try {
+                const updatedUser = { ...state.currentUser, password: p1 };
+                await setDoc(doc(db, BASE_PATH, 'users', state.currentUser.id), updatedUser);
+                state.currentUser.password = p1; // Actualizar el estado local
+                window.closeModal();
+                window.showToast('Contraseña actualizada exitosamente', 'success');
+            } catch (err) {
+                console.error("Error updating password:", err);
+                window.showToast('Error al actualizar la contraseña', 'error');
+            }
+        };
 
         // POS & SELLER
         window.renderPOSProducts = () => {
