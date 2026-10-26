@@ -34,11 +34,11 @@
             animation: float 3s ease-in-out infinite;
         }
         @keyframes pulse-glow {
-            0%, 100% { opacity: 0.4; transform: scale(1); }
-            50% { opacity: 0.8; transform: scale(1.1); }
+            0%, 100% { opacity: 0.2; transform: scale(0.9); }
+            50% { opacity: 0.6; transform: scale(1.2); }
         }
         .animate-pulse-glow {
-            animation: pulse-glow 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+            animation: pulse-glow 3s cubic-bezier(0.4, 0, 0.6, 1) infinite;
         }
         
         .fade-out {
@@ -54,12 +54,12 @@
     <!-- Pantalla de Carga Premium -->
     <div id="loading-screen" class="fixed inset-0 z-50 flex flex-col items-center justify-center bg-gradient-to-br from-slate-900 via-brand-900 to-slate-900 transition-all duration-700">
         <div class="relative flex flex-col items-center">
-            <div class="absolute inset-0 bg-blue-500 blur-[60px] rounded-full animate-pulse-glow w-32 h-32 m-auto"></div>
-            <div class="relative z-10 bg-white/10 backdrop-blur-md border border-white/20 p-6 rounded-3xl shadow-2xl animate-float mb-8 flex items-center justify-center">
-                <i class="fa-solid fa-cube text-5xl text-white"></i>
+            <div class="absolute inset-0 bg-blue-500 blur-[80px] rounded-full animate-pulse-glow w-40 h-40 m-auto"></div>
+            <div class="relative z-10 bg-white/5 backdrop-blur-xl border border-white/10 p-8 rounded-[2rem] shadow-2xl animate-float mb-8 flex items-center justify-center">
+                <i class="fa-solid fa-cube text-6xl text-white drop-shadow-lg"></i>
             </div>
-            <h1 class="text-4xl font-bold text-white tracking-wider mb-3 relative z-10">STOCKIA</h1>
-            <p class="text-blue-200 font-medium tracking-wide relative z-10 animate-pulse">Cada venta cuenta.</p>
+            <h1 class="text-5xl font-extrabold text-transparent bg-clip-text bg-gradient-to-r from-white to-blue-200 tracking-tight mb-3 relative z-10 drop-shadow-md">STOCKIA</h1>
+            <p class="text-blue-300/80 font-medium tracking-widest text-sm uppercase relative z-10 animate-pulse">Cada venta cuenta.</p>
         </div>
     </div>
 
@@ -67,8 +67,8 @@
     <div id="main-content" class="w-full h-full hidden">
         
         <!-- LOGIN SCREEN -->
-        <div id="login-view" class="w-full h-full flex items-center justify-center bg-slate-100 hidden">
-            <div class="bg-white p-8 rounded-2xl shadow-xl w-full max-w-md border border-slate-100">
+        <div id="login-view" class="w-full h-full flex items-center justify-center bg-slate-100 hidden p-4">
+            <div class="bg-white p-6 md:p-8 rounded-2xl shadow-xl w-full max-w-md border border-slate-100">
                 <div class="text-center mb-8">
                     <div class="w-16 h-16 bg-brand-600 rounded-xl flex items-center justify-center mx-auto mb-4 shadow-lg">
                         <i class="fa-solid fa-cube text-3xl text-white"></i>
@@ -82,7 +82,7 @@
                         <label class="block text-sm font-medium text-slate-700 mb-1">Usuario</label>
                         <div class="flex items-center border border-slate-300 rounded-lg focus-within:ring-2 focus-within:ring-brand-500 bg-white overflow-hidden transition-all">
                             <input type="text" id="login-user" class="w-full px-4 py-3 outline-none bg-transparent" placeholder="ej. luis" required>
-                            <span class="px-4 py-3 bg-slate-50 text-slate-500 font-medium border-l border-slate-200 select-none">@stockia.com</span>
+                            <span class="px-3 md:px-4 py-3 bg-slate-50 text-slate-500 font-medium border-l border-slate-200 select-none text-sm md:text-base">@stockia.com</span>
                         </div>
                     </div>
                     <div>
@@ -96,8 +96,12 @@
 
         <!-- APP DASHBOARD -->
         <div id="app-view" class="w-full h-full flex hidden">
+            
+            <!-- Mobile Sidebar Backdrop -->
+            <div id="sidebar-backdrop" onclick="window.toggleSidebar()" class="fixed inset-0 bg-slate-900/50 backdrop-blur-sm z-30 hidden md:hidden"></div>
+
             <!-- Sidebar -->
-            <aside class="w-64 bg-slate-900 text-white flex flex-col h-full shadow-2xl relative z-20">
+            <aside id="sidebar" class="w-64 bg-slate-900 text-white flex flex-col h-full shadow-2xl fixed inset-y-0 left-0 z-40 transform -translate-x-full transition-transform duration-300 md:relative md:translate-x-0">
                 <div class="p-6 border-b border-slate-800 flex items-center gap-3">
                     <div class="w-10 h-10 bg-brand-500 rounded-lg flex items-center justify-center shadow-inner">
                         <i class="fa-solid fa-cube text-xl"></i>
@@ -106,13 +110,16 @@
                         <h1 class="text-xl font-bold tracking-wide">Stockia</h1>
                         <p id="user-role-display" class="text-xs text-brand-300 uppercase font-semibold mt-1">Rol</p>
                     </div>
+                    <button onclick="window.toggleSidebar()" class="ml-auto md:hidden text-slate-400 hover:text-white">
+                        <i class="fa-solid fa-times text-xl"></i>
+                    </button>
                 </div>
                 
                 <div class="p-4 border-b border-slate-800">
                     <p class="text-sm text-slate-400">Usuario actual</p>
                     <p id="current-username" class="font-medium truncate mb-2">user@stockia.com</p>
-                    <button id="btn-change-pass" onclick="window.openChangePasswordModal()" class="hidden w-full text-left text-xs text-slate-300 hover:text-white flex items-center gap-2 py-1 px-2 rounded hover:bg-slate-800 transition-colors">
-                        <i class="fa-solid fa-key"></i> Cambiar contraseña
+                    <button id="btn-change-pass" onclick="window.openChangePasswordModal()" class="hidden w-full text-left text-xs text-slate-300 hover:text-white flex items-center gap-2 py-1.5 px-2 rounded hover:bg-slate-800 transition-colors">
+                        <i class="fa-solid fa-key w-4"></i> Cambiar contraseña
                     </button>
                 </div>
 
@@ -121,7 +128,7 @@
                 </nav>
 
                 <div class="p-4 border-t border-slate-800">
-                    <button onclick="window.logout()" class="w-full flex items-center gap-3 px-4 py-2 text-slate-300 hover:text-white hover:bg-red-500/20 rounded-lg transition-colors">
+                    <button onclick="window.logout()" class="w-full flex items-center gap-3 px-4 py-3 md:py-2 text-slate-300 hover:text-white hover:bg-red-500/20 rounded-lg transition-colors">
                         <i class="fa-solid fa-right-from-bracket"></i>
                         <span>Cerrar Sesión</span>
                     </button>
@@ -131,13 +138,18 @@
             <!-- Main Content Area -->
             <main class="flex-1 bg-slate-50 flex flex-col h-full relative overflow-hidden">
                 <!-- Header -->
-                <header class="bg-white shadow-sm h-16 flex items-center justify-between px-8 border-b border-slate-200 z-10 shrink-0">
-                    <h2 id="page-title" class="text-xl font-bold text-slate-800">Dashboard</h2>
-                    <div id="header-actions"></div>
+                <header class="bg-white shadow-sm h-16 flex items-center justify-between px-4 md:px-8 border-b border-slate-200 z-10 shrink-0">
+                    <div class="flex items-center gap-3">
+                        <button onclick="window.toggleSidebar()" class="md:hidden text-slate-500 hover:text-brand-600 focus:outline-none p-1">
+                            <i class="fa-solid fa-bars text-xl"></i>
+                        </button>
+                        <h2 id="page-title" class="text-lg md:text-xl font-bold text-slate-800 truncate">Dashboard</h2>
+                    </div>
+                    <div id="header-actions" class="flex gap-2"></div>
                 </header>
 
                 <!-- Dynamic Content -->
-                <div id="content-area" class="flex-1 p-8 overflow-y-auto">
+                <div id="content-area" class="flex-1 p-4 md:p-8 overflow-y-auto">
                     <!-- Views injected here -->
                 </div>
             </main>
@@ -148,8 +160,8 @@
     <div id="toast-container" class="fixed bottom-4 right-4 z-50 flex flex-col gap-2 pointer-events-none"></div>
 
     <!-- Modal Base -->
-    <div id="modal-backdrop" class="fixed inset-0 bg-slate-900/50 backdrop-blur-sm z-50 hidden flex items-center justify-center opacity-0 transition-opacity">
-        <div id="modal-content" class="bg-white rounded-2xl shadow-2xl w-full max-w-md p-6 transform scale-95 transition-transform">
+    <div id="modal-backdrop" class="fixed inset-0 bg-slate-900/50 backdrop-blur-sm z-50 hidden flex items-center justify-center opacity-0 transition-opacity p-4">
+        <div id="modal-content" class="bg-white rounded-2xl shadow-2xl w-full max-w-md p-5 md:p-6 transform scale-95 transition-transform max-h-[90vh] overflow-y-auto">
             <!-- Modal dinámico -->
         </div>
     </div>
@@ -160,7 +172,6 @@
         import { getAuth, signInAnonymously } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
         import { getFirestore, collection, addDoc, updateDoc, deleteDoc, doc, onSnapshot, setDoc } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
-        // Configuración entregada por el usuario
         const firebaseConfig = {
             apiKey: "AIzaSyCnSspkKiVa9nTgpyuwgZs_HS5uHNuGTeQ",
             authDomain: "stockia-8c34a.firebaseapp.com",
@@ -174,7 +185,7 @@
         const auth = getAuth(app);
         const db = getFirestore(app);
 
-        // Estado global sincronizado con Firebase
+        // Estado global
         window.state = {
             users: [],
             categories: [],
@@ -184,7 +195,7 @@
             cart: []
         };
 
-        window.currentViewId = null; // Para recordar dónde está el usuario y recargar
+        window.currentViewId = null; 
 
         // Controladores de carga
         let loaded = { users: false, categories: false, products: false, sales: false };
@@ -227,7 +238,13 @@
                 
                 if (window.state.currentUser) {
                     const me = window.state.users.find(u => u.id === window.state.currentUser.id);
-                    if(me) window.state.currentUser = me; // Actualiza pass si cambió
+                    if(me) {
+                        window.state.currentUser = me; 
+                    } else {
+                        // El usuario fue eliminado
+                        window.logout();
+                        window.showToast('Tu cuenta ha sido eliminada por un administrador.', 'error');
+                    }
                 }
                 
                 loaded.users = true;
@@ -267,14 +284,14 @@
             }
         };
 
-        // --- SISTEMA DE TOAST ---
+        // --- SISTEMA DE TOAST Y UI RESPONSIVA ---
         window.showToast = (msg, type = 'success') => {
             const container = document.getElementById('toast-container');
             const toast = document.createElement('div');
             const color = type === 'success' ? 'bg-green-500' : 'bg-red-500';
             const icon = type === 'success' ? 'fa-check-circle' : 'fa-circle-exclamation';
             
-            toast.className = `${color} text-white px-4 py-3 rounded-lg shadow-lg flex items-center gap-3 transform translate-y-10 opacity-0 transition-all duration-300 mb-2 pointer-events-auto`;
+            toast.className = `${color} text-white px-4 py-3 rounded-lg shadow-lg flex items-center gap-3 transform translate-y-10 opacity-0 transition-all duration-300 mb-2 pointer-events-auto text-sm md:text-base`;
             toast.innerHTML = `<i class="fa-solid ${icon}"></i> <span>${msg}</span>`;
             
             container.appendChild(toast);
@@ -286,7 +303,13 @@
             }, 3000);
         };
 
-        // --- MANEJO DE MODALES ---
+        window.toggleSidebar = () => {
+            const sidebar = document.getElementById('sidebar');
+            const backdrop = document.getElementById('sidebar-backdrop');
+            sidebar.classList.toggle('-translate-x-full');
+            backdrop.classList.toggle('hidden');
+        };
+
         window.openModal = (htmlContent) => {
             const backdrop = document.getElementById('modal-backdrop');
             const content = document.getElementById('modal-content');
@@ -313,7 +336,7 @@
             ],
             admin: [
                 { id: 'inv', label: 'Inventario', icon: 'fa-box', render: () => window.renderInventory() },
-                { id: 'cat', label: 'Categorías', icon: 'fa-layer-group', render: () => window.renderCategories() },
+                { id: 'cat', label: 'Secciones / Categorías', icon: 'fa-layer-group', render: () => window.renderCategories() },
                 { id: 'users', label: 'Vendedores', icon: 'fa-users', render: () => window.renderUsers() },
                 { id: 'rep', label: 'Reportes y Auditoría', icon: 'fa-chart-pie', render: () => window.renderReports() }
             ],
@@ -339,6 +362,12 @@
                 if(!isSilent) document.getElementById('page-title').innerText = view.label;
                 document.getElementById('header-actions').innerHTML = '';
                 document.getElementById('content-area').innerHTML = view.render();
+            }
+
+            // Auto-cerrar sidebar en móviles
+            if(window.innerWidth < 768 && !isSilent) {
+                document.getElementById('sidebar').classList.add('-translate-x-full');
+                document.getElementById('sidebar-backdrop').classList.add('hidden');
             }
         };
 
@@ -375,6 +404,7 @@
             document.getElementById('current-username').innerText = user.username;
             
             const btnPass = document.getElementById('btn-change-pass');
+            // Solo los admins pueden cambiar contraseñas libremente
             if (user.role === 'superadmin' || user.role === 'admin') btnPass.classList.remove('hidden');
             else btnPass.classList.add('hidden');
 
@@ -438,20 +468,20 @@
         };
 
         // ==========================================
-        // VISTAS SUPERADMIN
+        // VISTA SUPERADMIN (HQ)
         // ==========================================
         window.renderSuperAdminSedes = () => {
             document.getElementById('header-actions').innerHTML = `
-                <button onclick="window.openSuperAdminUserModal()" class="bg-brand-600 hover:bg-brand-700 text-white px-4 py-2 rounded-lg font-medium shadow-sm transition-colors text-sm flex items-center gap-2">
-                    <i class="fa-solid fa-plus"></i> Nueva Sede (Admin)
+                <button onclick="window.openSuperAdminUserModal()" class="bg-brand-600 hover:bg-brand-700 text-white px-3 md:px-4 py-2 rounded-lg font-medium shadow-sm transition-colors text-sm flex items-center gap-2">
+                    <i class="fa-solid fa-plus"></i> <span class="hidden md:inline">Nueva Sede (Admin)</span>
                 </button>
             `;
 
             const admins = window.state.users.filter(u => u.role === 'admin');
             
             let html = `
-                <div class="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden">
-                    <table class="w-full text-left border-collapse">
+                <div class="bg-white rounded-xl shadow-sm border border-slate-200 overflow-x-auto">
+                    <table class="w-full text-left border-collapse min-w-[500px]">
                         <thead>
                             <tr class="bg-slate-50 border-b border-slate-200 text-slate-600 text-sm">
                                 <th class="p-4 font-semibold">Usuario Sede (Admin)</th>
@@ -470,7 +500,7 @@
                         <tr class="hover:bg-slate-50 transition-colors">
                             <td class="p-4 font-medium text-slate-800">
                                 <div class="flex items-center gap-3">
-                                    <div class="w-8 h-8 rounded-full bg-indigo-100 text-indigo-600 flex items-center justify-center font-bold text-xs">A</div>
+                                    <div class="w-8 h-8 rounded-full bg-indigo-100 text-indigo-600 flex shrink-0 items-center justify-center font-bold text-xs">A</div>
                                     ${admin.username}
                                 </div>
                             </td>
@@ -494,15 +524,15 @@
         window.openSuperAdminUserModal = () => {
             window.openModal(`
                 <div class="flex justify-between items-center mb-4">
-                    <h3 class="text-xl font-bold">Nuevo Administrador de Sede</h3>
+                    <h3 class="text-xl font-bold">Nuevo Administrador</h3>
                     <button onclick="window.closeModal()" class="text-slate-400 hover:text-slate-600"><i class="fa-solid fa-times"></i></button>
                 </div>
                 <form onsubmit="window.saveUser(event, 'admin')" class="space-y-4">
                     <div>
-                        <label class="block text-sm font-medium mb-1">Nombre de Usuario</label>
+                        <label class="block text-sm font-medium mb-1">Nombre de Usuario (Sede)</label>
                         <div class="flex items-center border border-slate-300 rounded-lg focus-within:ring-2 focus-within:ring-brand-500 bg-white overflow-hidden">
                             <input type="text" id="u-name" required class="w-full px-3 py-2 outline-none" placeholder="ej. sede1">
-                            <span class="px-3 py-2 bg-slate-50 text-slate-500 border-l border-slate-200 text-sm">@stockia.com</span>
+                            <span class="px-2 py-2 bg-slate-50 text-slate-500 border-l border-slate-200 text-xs md:text-sm">@stockia.com</span>
                         </div>
                     </div>
                     <div>
@@ -514,25 +544,21 @@
             `);
         };
 
-
         // ==========================================
         // VISTAS ADMIN
         // ==========================================
         window.renderInventory = () => {
             document.getElementById('header-actions').innerHTML = `
                 <div class="flex gap-2">
-                    <button onclick="window.openAuditModal()" class="bg-indigo-100 hover:bg-indigo-200 text-indigo-700 px-4 py-2 rounded-lg font-medium shadow-sm transition-colors text-sm flex items-center gap-2">
-                        <i class="fa-solid fa-file-pdf"></i> Auditoría PDF
-                    </button>
-                    <button onclick="window.openProductModal()" class="bg-brand-600 hover:bg-brand-700 text-white px-4 py-2 rounded-lg font-medium shadow-sm transition-colors text-sm flex items-center gap-2">
-                        <i class="fa-solid fa-plus"></i> Nuevo Producto
+                    <button onclick="window.openProductModal()" class="bg-brand-600 hover:bg-brand-700 text-white px-3 md:px-4 py-2 rounded-lg font-medium shadow-sm transition-colors text-sm flex items-center gap-2">
+                        <i class="fa-solid fa-plus"></i> <span class="hidden md:inline">Nuevo Producto</span>
                     </button>
                 </div>
             `;
 
             let html = `
-                <div class="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden">
-                    <table class="w-full text-left border-collapse">
+                <div class="bg-white rounded-xl shadow-sm border border-slate-200 overflow-x-auto">
+                    <table class="w-full text-left border-collapse min-w-[600px]">
                         <thead>
                             <tr class="bg-slate-50 border-b border-slate-200 text-slate-600 text-sm">
                                 <th class="p-4 font-semibold">Producto</th>
@@ -647,8 +673,8 @@
 
         window.renderCategories = () => {
             document.getElementById('header-actions').innerHTML = `
-                <button onclick="window.openCategoryModal()" class="bg-brand-600 hover:bg-brand-700 text-white px-4 py-2 rounded-lg font-medium shadow-sm transition-colors text-sm flex items-center gap-2">
-                    <i class="fa-solid fa-plus"></i> Nueva Categoría
+                <button onclick="window.openCategoryModal()" class="bg-brand-600 hover:bg-brand-700 text-white px-3 md:px-4 py-2 rounded-lg font-medium shadow-sm transition-colors text-sm flex items-center gap-2">
+                    <i class="fa-solid fa-plus"></i> <span class="hidden md:inline">Nueva Categoría</span>
                 </button>
             `;
 
@@ -723,16 +749,16 @@
 
         window.renderUsers = () => {
             document.getElementById('header-actions').innerHTML = `
-                <button onclick="window.openUserModal()" class="bg-brand-600 hover:bg-brand-700 text-white px-4 py-2 rounded-lg font-medium shadow-sm transition-colors text-sm flex items-center gap-2">
-                    <i class="fa-solid fa-user-plus"></i> Nuevo Vendedor
+                <button onclick="window.openUserModal()" class="bg-brand-600 hover:bg-brand-700 text-white px-3 md:px-4 py-2 rounded-lg font-medium shadow-sm transition-colors text-sm flex items-center gap-2">
+                    <i class="fa-solid fa-user-plus"></i> <span class="hidden md:inline">Nuevo Vendedor</span>
                 </button>
             `;
 
             const sellers = window.state.users.filter(u => u.role === 'seller');
             
             let html = `
-                <div class="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden">
-                    <table class="w-full text-left border-collapse">
+                <div class="bg-white rounded-xl shadow-sm border border-slate-200 overflow-x-auto">
+                    <table class="w-full text-left border-collapse min-w-[600px]">
                         <thead>
                             <tr class="bg-slate-50 border-b border-slate-200 text-slate-600 text-sm">
                                 <th class="p-4 font-semibold">Usuario (Vendedor)</th>
@@ -753,7 +779,7 @@
                         <tr class="hover:bg-slate-50 transition-colors">
                             <td class="p-4 font-medium text-slate-800">
                                 <div class="flex items-center gap-3">
-                                    <div class="w-8 h-8 rounded-full bg-blue-100 text-blue-600 flex items-center justify-center font-bold text-xs">V</div>
+                                    <div class="w-8 h-8 rounded-full bg-blue-100 text-blue-600 shrink-0 flex items-center justify-center font-bold text-xs">V</div>
                                     ${u.username}
                                 </div>
                             </td>
@@ -787,10 +813,10 @@
                 </div>
                 <form onsubmit="window.saveUser(event, 'seller')" class="space-y-4">
                     <div>
-                        <label class="block text-sm font-medium mb-1">Usuario</label>
+                        <label class="block text-sm font-medium mb-1">Usuario (Solo nombre)</label>
                         <div class="flex items-center border border-slate-300 rounded-lg focus-within:ring-2 focus-within:ring-brand-500 bg-white overflow-hidden">
                             <input type="text" id="u-name" required class="w-full px-3 py-2 outline-none" placeholder="ej. vendedor1">
-                            <span class="px-3 py-2 bg-slate-50 text-slate-500 border-l border-slate-200 text-sm">@stockia.com</span>
+                            <span class="px-2 py-2 bg-slate-50 text-slate-500 border-l border-slate-200 text-xs md:text-sm">@stockia.com</span>
                         </div>
                     </div>
                     <div>
@@ -842,65 +868,124 @@
         // --- REPORTES Y AUDITORÍAS ---
         window.renderReports = () => {
             document.getElementById('header-actions').innerHTML = `
-                <button onclick="window.openAuditModal()" class="bg-indigo-600 hover:bg-indigo-700 text-white px-4 py-2 rounded-lg font-medium shadow-sm transition-colors text-sm flex items-center gap-2">
-                    <i class="fa-solid fa-file-pdf"></i> Generar Auditoría PDF
+                <button onclick="window.openAuditModal()" class="bg-indigo-600 hover:bg-indigo-700 text-white px-3 md:px-4 py-2 rounded-lg font-medium shadow-sm transition-colors text-sm flex items-center gap-2">
+                    <i class="fa-solid fa-file-pdf"></i> <span class="hidden md:inline">Auditoría PDF</span>
                 </button>
             `;
 
-            const today = new Date().toLocaleDateString();
-            const todaySales = window.state.sales.filter(s => new Date(s.timestamp).toLocaleDateString() === today);
-            const totalToday = todaySales.reduce((sum, s) => sum + s.total, 0);
-            const totalHistorical = window.state.sales.reduce((sum, s) => sum + s.total, 0);
+            let catOptions = window.state.categories.map(c => `<option value="${c.id}">${c.name}</option>`).join('');
+            let sellerOptions = window.state.users.filter(u=>u.role==='seller').map(s => `<option value="${s.id}">${s.username}</option>`).join('');
 
             let html = `
-                <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
-                    <div class="bg-gradient-to-br from-brand-500 to-brand-700 rounded-xl p-6 text-white shadow-md">
-                        <h3 class="text-brand-100 font-medium mb-1">Ventas Hoy</h3>
-                        <p class="text-4xl font-bold">$${totalToday.toLocaleString()}</p>
-                        <p class="text-sm mt-2 opacity-80">${todaySales.length} transacciones registradas</p>
+                <div class="bg-white p-4 rounded-xl shadow-sm border border-slate-200 mb-6 flex flex-col md:flex-row gap-4">
+                    <div class="flex-1">
+                        <label class="block text-xs font-medium text-slate-500 uppercase mb-1">Periodo</label>
+                        <select id="rep-time" onchange="window.updateReportView()" class="w-full px-3 py-2 border border-slate-300 rounded-lg outline-none text-sm">
+                            <option value="today">Hoy</option>
+                            <option value="week">Última Semana</option>
+                            <option value="fortnight">Última Quincena</option>
+                            <option value="month">Último Mes</option>
+                            <option value="all">Todo el Histórico</option>
+                        </select>
                     </div>
-                    <div class="bg-white border border-slate-200 rounded-xl p-6 shadow-sm">
-                        <h3 class="text-slate-500 font-medium mb-1">Ventas Históricas Totales</h3>
-                        <p class="text-4xl font-bold text-slate-800">$${totalHistorical.toLocaleString()}</p>
-                        <p class="text-sm mt-2 text-slate-400">Todo el registro en base de datos</p>
+                    <div class="flex-1">
+                        <label class="block text-xs font-medium text-slate-500 uppercase mb-1">Categoría</label>
+                        <select id="rep-cat" onchange="window.updateReportView()" class="w-full px-3 py-2 border border-slate-300 rounded-lg outline-none text-sm">
+                            <option value="all">Todas las Categorías</option>
+                            ${catOptions}
+                        </select>
+                    </div>
+                    <div class="flex-1">
+                        <label class="block text-xs font-medium text-slate-500 uppercase mb-1">Vendedor</label>
+                        <select id="rep-seller" onchange="window.updateReportView()" class="w-full px-3 py-2 border border-slate-300 rounded-lg outline-none text-sm">
+                            <option value="all">Todos los Vendedores</option>
+                            ${sellerOptions}
+                        </select>
                     </div>
                 </div>
 
-                <div class="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden">
+                <div id="report-results-container">
+                    <!-- Se inyecta con updateReportView() -->
+                </div>
+            `;
+            
+            setTimeout(window.updateReportView, 0);
+            return html;
+        };
+
+        window.updateReportView = () => {
+            const timeFilter = document.getElementById('rep-time').value;
+            const catFilter = document.getElementById('rep-cat').value;
+            const sellerFilter = document.getElementById('rep-seller').value;
+            
+            const now = new Date();
+            
+            let filteredSales = window.state.sales.filter(s => {
+                let match = true;
+                if(catFilter !== 'all' && s.categoryId !== catFilter) match = false;
+                if(sellerFilter !== 'all' && s.sellerId !== sellerFilter) match = false;
+                
+                const sDate = new Date(s.timestamp);
+                if(timeFilter === 'today') {
+                    if(sDate.toLocaleDateString() !== now.toLocaleDateString()) match = false;
+                } else if(timeFilter === 'week') {
+                    const weekAgo = new Date(); weekAgo.setDate(weekAgo.getDate() - 7);
+                    if(sDate < weekAgo) match = false;
+                } else if(timeFilter === 'fortnight') {
+                    const fortAgo = new Date(); fortAgo.setDate(fortAgo.getDate() - 15);
+                    if(sDate < fortAgo) match = false;
+                } else if(timeFilter === 'month') {
+                    const monthAgo = new Date(); monthAgo.setMonth(monthAgo.getMonth() - 1);
+                    if(sDate < monthAgo) match = false;
+                }
+                return match;
+            });
+
+            const total = filteredSales.reduce((sum, s) => sum + s.total, 0);
+
+            let html = `
+                <div class="bg-gradient-to-br from-brand-500 to-brand-700 rounded-xl p-6 text-white shadow-md mb-6">
+                    <h3 class="text-brand-100 font-medium mb-1">Total Recaudado (Filtro Actual)</h3>
+                    <p class="text-4xl md:text-5xl font-bold">$${total.toLocaleString()}</p>
+                    <p class="text-sm mt-2 opacity-80">${filteredSales.length} transacciones encontradas</p>
+                </div>
+
+                <div class="bg-white rounded-xl shadow-sm border border-slate-200 overflow-x-auto">
                     <div class="p-4 border-b border-slate-200 bg-slate-50">
-                        <h3 class="font-bold text-slate-800">Últimas Transacciones</h3>
+                        <h3 class="font-bold text-slate-800">Transacciones</h3>
                     </div>
-                    <table class="w-full text-left border-collapse">
+                    <table class="w-full text-left border-collapse min-w-[700px]">
                         <thead>
                             <tr class="text-slate-500 text-sm border-b border-slate-100">
                                 <th class="p-4">Fecha/Hora</th>
                                 <th class="p-4">Vendedor</th>
                                 <th class="p-4">Sección</th>
+                                <th class="p-4">Artículos</th>
                                 <th class="p-4 text-right">Total</th>
                             </tr>
                         </thead>
                         <tbody class="divide-y divide-slate-100">
             `;
 
-            const latestSales = [...window.state.sales].sort((a,b) => b.timestamp - a.timestamp).slice(0, 10);
-            
-            if(latestSales.length === 0) {
-                html += `<tr><td colspan="4" class="p-8 text-center text-slate-400">No hay ventas registradas.</td></tr>`;
+            if(filteredSales.length === 0) {
+                html += `<tr><td colspan="5" class="p-8 text-center text-slate-400">No hay ventas registradas con estos filtros.</td></tr>`;
             } else {
-                latestSales.forEach(s => {
+                filteredSales.sort((a,b) => b.timestamp - a.timestamp).forEach(s => {
                     const cat = window.state.categories.find(c => c.id === s.categoryId) || {name: 'N/A'};
+                    const itemsResumen = s.items.map(i => `${i.qty}x ${i.name}`).join(', ');
                     html += `
                         <tr class="text-sm hover:bg-slate-50">
-                            <td class="p-4 text-slate-500">${s.date}</td>
+                            <td class="p-4 text-slate-500 whitespace-nowrap">${s.date}</td>
                             <td class="p-4 font-medium">${s.sellerName}</td>
                             <td class="p-4"><span class="bg-slate-100 px-2 py-1 rounded">${cat.name}</span></td>
+                            <td class="p-4 text-slate-500 truncate max-w-xs" title="${itemsResumen}">${itemsResumen}</td>
                             <td class="p-4 text-right font-bold text-green-600">$${s.total.toLocaleString()}</td>
                         </tr>
                     `;
                 });
             }
             html += `</tbody></table></div>`;
-            return html;
+            document.getElementById('report-results-container').innerHTML = html;
         };
 
         window.openAuditModal = () => {
@@ -927,6 +1012,7 @@
                             <select id="audit-time" class="w-full px-3 py-2 border border-slate-300 rounded-lg outline-none">
                                 <option value="today">Hoy</option>
                                 <option value="week">Última Semana</option>
+                                <option value="fortnight">Última Quincena</option>
                                 <option value="month">Último Mes</option>
                                 <option value="all">Todo el Histórico</option>
                             </select>
@@ -1019,6 +1105,9 @@
                     } else if(timeFilter === 'week') {
                         const weekAgo = new Date(); weekAgo.setDate(weekAgo.getDate() - 7);
                         if(sDate < weekAgo) match = false;
+                    } else if(timeFilter === 'fortnight') {
+                        const fortAgo = new Date(); fortAgo.setDate(fortAgo.getDate() - 15);
+                        if(sDate < fortAgo) match = false;
                     } else if(timeFilter === 'month') {
                         const monthAgo = new Date(); monthAgo.setMonth(monthAgo.getMonth() - 1);
                         if(sDate < monthAgo) match = false;
@@ -1064,35 +1153,39 @@
             const catName = myCat ? myCat.name : 'Sin sección asignada';
 
             document.getElementById('header-actions').innerHTML = `
-                <button onclick="window.showSellerSales()" class="bg-indigo-100 hover:bg-indigo-200 text-indigo-700 px-4 py-2 rounded-lg font-medium shadow-sm transition-colors text-sm flex items-center gap-2">
-                    <i class="fa-solid fa-list-check"></i> Mis Ventas de Hoy
+                <button onclick="window.showSellerSales()" class="bg-indigo-100 hover:bg-indigo-200 text-indigo-700 px-3 md:px-4 py-2 rounded-lg font-medium shadow-sm transition-colors text-sm flex items-center gap-2">
+                    <i class="fa-solid fa-list-check"></i> <span class="hidden md:inline">Mis Ventas de Hoy</span>
                 </button>
             `;
 
+            // Layout adaptable para móvil: se apilan, en desktop van uno al lado del otro
             let html = `
-                <div class="flex flex-col lg:flex-row gap-6 h-[calc(100vh-140px)]">
-                    <div class="flex-1 flex flex-col bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden">
-                        <div class="p-4 border-b border-slate-200 bg-slate-50 flex justify-between items-center">
-                            <h3 class="font-bold text-slate-800">Productos Disponibles</h3>
-                            <span class="bg-brand-100 text-brand-700 px-3 py-1 rounded-full text-sm font-semibold">${catName}</span>
+                <div class="flex flex-col lg:flex-row gap-4 md:gap-6 h-full lg:h-[calc(100vh-140px)]">
+                    
+                    <!-- Productos -->
+                    <div class="flex-1 flex flex-col bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden h-[50vh] lg:h-full">
+                        <div class="p-4 border-b border-slate-200 bg-slate-50 flex justify-between items-center shrink-0">
+                            <h3 class="font-bold text-slate-800 text-sm md:text-base">Productos</h3>
+                            <span class="bg-brand-100 text-brand-700 px-3 py-1 rounded-full text-xs md:text-sm font-semibold truncate max-w-[120px] md:max-w-none">${catName}</span>
                         </div>
-                        <div class="p-4 overflow-y-auto grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4" id="pos-products">
+                        <div class="p-4 overflow-y-auto grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4 content-start flex-1" id="pos-products">
                             ${window.generatePOSProducts(seller.categoryId)}
                         </div>
                     </div>
 
-                    <div class="w-full lg:w-96 bg-white rounded-xl shadow-sm border border-slate-200 flex flex-col h-full overflow-hidden">
-                        <div class="p-4 border-b border-slate-200 bg-slate-900 text-white flex justify-between items-center">
+                    <!-- Carrito -->
+                    <div class="w-full lg:w-96 bg-white rounded-xl shadow-sm border border-slate-200 flex flex-col h-[50vh] lg:h-full shrink-0">
+                        <div class="p-4 border-b border-slate-200 bg-slate-900 text-white flex justify-between items-center shrink-0">
                             <h3 class="font-bold">Orden Actual</h3>
                             <button onclick="window.clearCart()" class="text-slate-400 hover:text-white text-sm"><i class="fa-solid fa-trash"></i> Vaciar</button>
                         </div>
                         <div class="flex-1 p-4 overflow-y-auto" id="pos-cart">
                             ${window.generateCartHTML()}
                         </div>
-                        <div class="p-4 border-t border-slate-200 bg-slate-50">
-                            <button onclick="window.checkout()" id="btn-checkout" class="w-full bg-green-600 hover:bg-green-700 text-white font-bold py-4 rounded-xl shadow-lg transition-transform active:scale-95 flex justify-between items-center px-6">
+                        <div class="p-4 border-t border-slate-200 bg-slate-50 shrink-0">
+                            <button onclick="window.checkout()" id="btn-checkout" class="w-full bg-green-600 hover:bg-green-700 text-white font-bold py-3 md:py-4 rounded-xl shadow-lg transition-transform active:scale-95 flex justify-between items-center px-4 md:px-6">
                                 <span>Cobrar</span>
-                                <span class="text-xl" id="cart-total-display">$0</span>
+                                <span class="text-lg md:text-xl" id="cart-total-display">$0</span>
                             </button>
                         </div>
                     </div>
@@ -1108,10 +1201,10 @@
             return prods.map(p => {
                 const outOfStock = p.stock === 0;
                 return `
-                    <div onclick="${outOfStock ? '' : `window.addToCart('${p.id}')`}" class="${outOfStock ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer hover:border-brand-500 hover:shadow-md'} bg-white border border-slate-200 rounded-xl p-4 transition-all flex flex-col h-full select-none">
+                    <div onclick="${outOfStock ? '' : `window.addToCart('${p.id}')`}" class="${outOfStock ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer hover:border-brand-500 hover:shadow-md'} bg-white border border-slate-200 rounded-xl p-3 md:p-4 transition-all flex flex-col h-full select-none">
                         <div class="flex-1 mb-2">
-                            <h4 class="font-bold text-slate-800 leading-tight">${p.name}</h4>
-                            <p class="text-green-600 font-bold mt-1">$${p.price.toLocaleString()}</p>
+                            <h4 class="font-bold text-slate-800 leading-tight text-sm md:text-base">${p.name}</h4>
+                            <p class="text-green-600 font-bold mt-1 text-sm md:text-base">$${p.price.toLocaleString()}</p>
                         </div>
                         <div class="text-xs text-slate-500 bg-slate-100 px-2 py-1 rounded inline-block w-max">
                             Stock: <span class="${p.stock < 5 ? 'text-red-500 font-bold' : ''}">${p.stock}</span>
@@ -1122,7 +1215,7 @@
         };
 
         window.generateCartHTML = () => {
-            if(window.state.cart.length === 0) return `<div class="text-center text-slate-400 mt-10"><i class="fa-solid fa-basket-shopping text-4xl mb-3 opacity-50"></i><p>El carrito está vacío</p></div>`;
+            if(window.state.cart.length === 0) return `<div class="text-center text-slate-400 mt-10"><i class="fa-solid fa-basket-shopping text-3xl md:text-4xl mb-3 opacity-50"></i><p class="text-sm md:text-base">El carrito está vacío</p></div>`;
             
             let total = 0;
             let html = '<ul class="space-y-3">';
@@ -1132,12 +1225,12 @@
                 total += itemTotal;
                 html += `
                     <li class="flex justify-between items-center border-b border-slate-100 pb-3">
-                        <div class="flex-1">
-                            <p class="font-bold text-slate-800 text-sm">${p.name}</p>
-                            <p class="text-xs text-slate-500">$${p.price.toLocaleString()} x ${item.qty}</p>
+                        <div class="flex-1 min-w-0 pr-2">
+                            <p class="font-bold text-slate-800 text-xs md:text-sm truncate">${p.name}</p>
+                            <p class="text-[10px] md:text-xs text-slate-500">$${p.price.toLocaleString()} x ${item.qty}</p>
                         </div>
-                        <div class="font-bold text-slate-800 w-20 text-right">$${itemTotal.toLocaleString()}</div>
-                        <button onclick="window.removeFromCart(${index})" class="text-red-400 hover:text-red-600 ml-3"><i class="fa-solid fa-times-circle"></i></button>
+                        <div class="font-bold text-slate-800 w-16 md:w-20 text-right text-sm whitespace-nowrap">$${itemTotal.toLocaleString()}</div>
+                        <button onclick="window.removeFromCart(${index})" class="text-red-400 hover:text-red-600 ml-2 md:ml-3 p-1"><i class="fa-solid fa-times-circle text-lg"></i></button>
                     </li>
                 `;
             });
@@ -1238,14 +1331,14 @@
                     </div>
                     <i class="fa-solid fa-sack-dollar text-3xl text-indigo-200"></i>
                 </div>
-                <div class="max-h-64 overflow-y-auto">
+                <div class="max-h-64 overflow-y-auto pr-2">
                     <ul class="space-y-2">
             `;
 
             if(mySales.length === 0) {
                 html += `<li class="text-center text-slate-400 py-4">Aún no tienes ventas hoy.</li>`;
             } else {
-                mySales.reverse().forEach(s => {
+                mySales.sort((a,b) => b.timestamp - a.timestamp).forEach(s => {
                     const time = new Date(s.timestamp).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'});
                     html += `
                         <li class="bg-slate-50 border border-slate-100 rounded p-3 flex justify-between items-center">
