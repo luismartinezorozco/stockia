@@ -3,19 +3,17 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Stockia - Sistema de Inventario y Ventas</title>
-    
+    <title>Stockia - Sistema de Gestión</title>
     <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <!-- jsPDF para Reportes -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.28/jspdf.plugin.autotable.min.js"></script>
-    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.31/jspdf.plugin.autotable.min.js"></script>
     
     <script>
         tailwind.config = {
             theme: {
                 extend: {
-                    fontFamily: { sans: ['Inter', 'sans-serif'] },
                     colors: {
                         brand: { 50: '#eff6ff', 100: '#dbeafe', 500: '#3b82f6', 600: '#2563eb', 700: '#1d4ed8', 900: '#1e3a8a' }
                     }
@@ -24,915 +22,308 @@
         }
     </script>
     <style>
-        body { font-family: 'Inter', sans-serif; background-color: #f8fafc; }
-        .scrollbar-hide::-webkit-scrollbar { display: none; }
-        .scrollbar-hide { -ms-overflow-style: none; scrollbar-width: none; }
-        .fade-in { animation: fadeIn 0.3s ease-in-out; }
-        @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
+        body { font-family: 'Inter', sans-serif; }
         
-        /* Nuevas animaciones para la pantalla de carga */
-        @keyframes float { 0%, 100% { transform: translateY(0px); } 50% { transform: translateY(-15px); } }
-        .animate-float { animation: float 3s ease-in-out infinite; }
-        @keyframes pulse-glow { 0%, 100% { opacity: 0.3; transform: scale(0.8); } 50% { opacity: 0.6; transform: scale(1.2); } }
-        .animate-pulse-glow { animation: pulse-glow 2.5s ease-in-out infinite; }
+        /* Animaciones para la pantalla de carga */
+        @keyframes float {
+            0%, 100% { transform: translateY(0); }
+            50% { transform: translateY(-15px); }
+        }
+        .animate-float {
+            animation: float 3s ease-in-out infinite;
+        }
+        @keyframes pulse-glow {
+            0%, 100% { opacity: 0.4; transform: scale(1); }
+            50% { opacity: 0.8; transform: scale(1.1); }
+        }
+        .animate-pulse-glow {
+            animation: pulse-glow 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+        }
+        
+        .fade-out {
+            opacity: 0;
+            transform: scale(1.05);
+            transition: all 0.7s ease-out;
+            pointer-events: none;
+        }
     </style>
 </head>
-<body class="text-slate-800 antialiased h-screen flex flex-col overflow-hidden relative">
+<body class="bg-slate-50 text-slate-800 h-screen overflow-hidden flex">
 
-    <!-- Loading Overlay (Firebase Connection) Animado -->
-    <div id="loading-overlay" class="fixed inset-0 bg-gradient-to-br from-slate-900 to-brand-900 z-[100] flex flex-col items-center justify-center text-white transition-all duration-700">
-        <div class="relative flex items-center justify-center mb-8 mt-[-10vh]">
-            <!-- Resplandor de fondo -->
-            <div class="absolute inset-0 bg-brand-400 rounded-full blur-2xl animate-pulse-glow"></div>
-            <!-- Logo Flotante -->
-            <div class="relative bg-white/10 p-6 rounded-3xl border border-white/20 backdrop-blur-md animate-float shadow-2xl">
-                <i class="fa-solid fa-box-open text-6xl text-white"></i>
-            </div>
-        </div>
-        <h1 class="text-4xl font-bold tracking-wider mb-3 text-transparent bg-clip-text bg-gradient-to-r from-white to-brand-200">STOCKIA</h1>
-        <div class="flex items-center gap-3 bg-black/20 px-4 py-2 rounded-full backdrop-blur-sm border border-white/10">
-            <i class="fa-solid fa-circle-notch fa-spin text-brand-300"></i>
-            <p class="text-sm font-medium tracking-wide text-brand-100">Cada venta cuenta.</p>
-        </div>
-    </div>
-
-    <!-- Toast Notifications Container -->
-    <div id="toast-container" class="fixed top-4 right-4 z-50 flex flex-col gap-2"></div>
-
-    <!-- Modal Overlay -->
-    <div id="modal-overlay" class="fixed inset-0 bg-black/50 backdrop-blur-sm z-40 hidden flex items-center justify-center p-4">
-        <div id="modal-content" class="bg-white rounded-2xl shadow-xl w-full max-w-md p-6 transform transition-all scale-95 opacity-0 max-h-[90vh] overflow-y-auto">
-            <!-- Modal dynamic content goes here -->
-        </div>
-    </div>
-
-    <!-- LOGIN VIEW -->
-    <div id="view-login" class="hidden flex-1 flex items-center justify-center bg-slate-100 p-4 fade-in z-10">
-        <div class="bg-white p-8 rounded-2xl shadow-lg w-full max-w-md">
-            <div class="text-center mb-8">
-                <div class="bg-brand-100 w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-4">
-                    <i class="fa-solid fa-box-open text-2xl text-brand-600"></i>
-                </div>
-                <h1 class="text-2xl font-bold text-slate-800">Stockia</h1>
-                <p class="text-slate-500 text-sm mt-1">Ingresa a tu cuenta</p>
+    <!-- Pantalla de Carga Premium -->
+    <div id="loading-screen" class="fixed inset-0 z-50 flex flex-col items-center justify-center bg-gradient-to-br from-slate-900 via-brand-900 to-slate-900 transition-all duration-700">
+        <div class="relative flex flex-col items-center">
+            <!-- Glow background -->
+            <div class="absolute inset-0 bg-blue-500 blur-[60px] rounded-full animate-pulse-glow w-32 h-32 m-auto"></div>
+            
+            <!-- Logo Box -->
+            <div class="relative z-10 bg-white/10 backdrop-blur-md border border-white/20 p-6 rounded-3xl shadow-2xl animate-float mb-8 flex items-center justify-center">
+                <i class="fa-solid fa-cube text-5xl text-white"></i>
             </div>
             
-            <form id="login-form" class="space-y-4" onsubmit="window.handleLogin(event)">
-                <div>
-                    <label class="block text-sm font-medium text-slate-700 mb-1">Usuario</label>
-                    <input type="text" id="login-user" class="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-brand-500 focus:border-brand-500 outline-none transition-all" placeholder="ej. correo@empresa.com" required>
-                </div>
-                <div>
-                    <label class="block text-sm font-medium text-slate-700 mb-1">Contraseña</label>
-                    <input type="password" id="login-pass" class="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-brand-500 focus:border-brand-500 outline-none transition-all" placeholder="••••••••" required>
-                </div>
-                <button type="submit" class="w-full bg-brand-600 hover:bg-brand-700 text-white font-medium py-2.5 rounded-lg transition-colors mt-2 shadow-sm">
-                    Ingresar
-                </button>
-            </form>
+            <h1 class="text-4xl font-bold text-white tracking-wider mb-3 relative z-10">STOCKIA</h1>
+            <p class="text-blue-200 font-medium tracking-wide relative z-10 animate-pulse">Cada venta cuenta.</p>
         </div>
     </div>
 
-    <!-- SUPER ADMIN VIEW -->
-    <div id="view-superadmin" class="hidden flex-col h-full bg-slate-100 fade-in z-10 relative">
-        <header class="bg-slate-900 text-white shadow-md px-6 py-4 flex justify-between items-center shrink-0">
-            <div class="flex items-center gap-3">
-                <i class="fa-solid fa-chess-king text-brand-500 text-2xl"></i>
-                <div>
-                    <h1 class="font-bold leading-tight">Stockia HQ - Super Admin</h1>
-                    <p class="text-xs text-slate-400" id="sa-username-display">Sede Central</p>
+    <!-- Contenedor Principal (Login o App) -->
+    <div id="main-content" class="w-full h-full hidden">
+        
+        <!-- LOGIN SCREEN -->
+        <div id="login-view" class="w-full h-full flex items-center justify-center bg-slate-100 hidden">
+            <div class="bg-white p-8 rounded-2xl shadow-xl w-full max-w-md border border-slate-100">
+                <div class="text-center mb-8">
+                    <div class="w-16 h-16 bg-brand-600 rounded-xl flex items-center justify-center mx-auto mb-4 shadow-lg">
+                        <i class="fa-solid fa-cube text-3xl text-white"></i>
+                    </div>
+                    <h2 class="text-2xl font-bold text-slate-800">Bienvenido a Stockia</h2>
+                    <p class="text-slate-500 mt-1">Ingresa tus credenciales para continuar</p>
                 </div>
-            </div>
-            <button onclick="window.logout()" class="text-red-400 hover:text-red-300 flex items-center gap-2 text-sm font-medium transition-colors">
-                <i class="fa-solid fa-sign-out-alt"></i> Salir
-            </button>
-        </header>
-        <main class="flex-1 overflow-y-auto p-4 md:p-8 w-full max-w-5xl mx-auto">
-            <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-6 gap-4">
-                <div>
-                    <h2 class="text-2xl font-bold text-slate-800">Administradores de Sedes</h2>
-                    <p class="text-sm text-slate-500">Crea los perfiles principales para la gestión del inventario</p>
-                </div>
-                <button onclick="window.openSuperAdminUserModal()" class="bg-brand-600 hover:bg-brand-700 text-white px-4 py-2 rounded-lg flex items-center justify-center gap-2 shadow-sm transition-colors whitespace-nowrap">
-                    <i class="fa-solid fa-user-tie"></i> Nuevo Administrador
-                </button>
-            </div>
-            <div class="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden">
-                <div class="overflow-x-auto">
-                    <table class="w-full text-left border-collapse">
-                        <thead>
-                            <tr class="bg-slate-50 border-b border-slate-200 text-slate-600 text-sm">
-                                <th class="py-3 px-4 font-medium">ID / Ref</th>
-                                <th class="py-3 px-4 font-medium">Usuario (Email)</th>
-                                <th class="py-3 px-4 font-medium">Contraseña</th>
-                                <th class="py-3 px-4 font-medium text-right">Acciones</th>
-                            </tr>
-                        </thead>
-                        <tbody id="sa-admins-tbody" class="divide-y divide-slate-100 text-sm">
-                            <!-- JS Populated -->
-                        </tbody>
-                    </table>
-                </div>
-            </div>
-        </main>
-    </div>
 
-    <!-- ADMIN VIEW -->
-    <div id="view-admin" class="hidden flex-1 flex h-full fade-in z-10 relative">
-        <aside class="w-64 bg-slate-900 text-slate-300 flex flex-col transition-all duration-300 fixed md:relative z-30 h-full -translate-x-full md:translate-x-0 shadow-xl md:shadow-none" id="admin-sidebar">
-            <div class="p-6 flex items-center justify-between border-b border-slate-800">
-                <div class="flex items-center gap-3">
-                    <i class="fa-solid fa-box-open text-brand-500"></i>
-                    <span class="text-white font-bold text-lg tracking-wide">Stockia</span>
-                </div>
-                <button class="md:hidden text-slate-400 hover:text-white" onclick="window.toggleSidebar()">
-                    <i class="fa-solid fa-times"></i>
-                </button>
+                <form id="login-form" class="space-y-5" onsubmit="window.handleLogin(event)">
+                    <div>
+                        <label class="block text-sm font-medium text-slate-700 mb-1">Usuario</label>
+                        <div class="flex items-center border border-slate-300 rounded-lg focus-within:ring-2 focus-within:ring-brand-500 bg-white overflow-hidden transition-all">
+                            <input type="text" id="login-user" class="w-full px-4 py-3 outline-none bg-transparent" placeholder="ej. luis" required>
+                            <span class="px-4 py-3 bg-slate-50 text-slate-500 font-medium border-l border-slate-200 select-none">@stockia.com</span>
+                        </div>
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-slate-700 mb-1">Contraseña</label>
+                        <input type="password" id="login-pass" class="w-full px-4 py-3 border border-slate-300 rounded-lg focus:ring-2 focus:ring-brand-500 outline-none transition-all" placeholder="••••••••" required>
+                    </div>
+                    <button type="submit" class="w-full bg-brand-600 hover:bg-brand-700 text-white font-semibold py-3 px-4 rounded-lg transition-colors shadow-md mt-4">Ingresar al Sistema</button>
+                </form>
             </div>
-            <nav class="flex-1 px-4 py-6 space-y-2">
-                <a href="#" onclick="window.switchAdminTab('inventory')" class="admin-tab-btn active flex items-center gap-3 px-4 py-3 rounded-lg bg-brand-600 text-white transition-colors" data-target="inventory">
-                    <i class="fa-solid fa-box-open w-5 text-center"></i> <span>Inventario</span>
-                </a>
-                <a href="#" onclick="window.switchAdminTab('categories')" class="admin-tab-btn flex items-center gap-3 px-4 py-3 rounded-lg hover:bg-slate-800 transition-colors" data-target="categories">
-                    <i class="fa-solid fa-layer-group w-5 text-center"></i> <span>Secciones</span>
-                </a>
-                <a href="#" onclick="window.switchAdminTab('reports')" class="admin-tab-btn flex items-center gap-3 px-4 py-3 rounded-lg hover:bg-slate-800 transition-colors" data-target="reports">
-                    <i class="fa-solid fa-chart-line w-5 text-center"></i> <span>Reportes</span>
-                </a>
-                <a href="#" onclick="window.switchAdminTab('users')" class="admin-tab-btn flex items-center gap-3 px-4 py-3 rounded-lg hover:bg-slate-800 transition-colors" data-target="users">
-                    <i class="fa-solid fa-users w-5 text-center"></i> <span>Vendedores</span>
-                </a>
-            </nav>
-            <div class="p-4 border-t border-slate-800">
-                <div class="flex items-center gap-3 px-4 py-2 mb-2">
-                    <div class="w-8 h-8 rounded-full bg-slate-700 flex items-center justify-center text-sm font-bold text-white">A</div>
-                    <div class="text-sm truncate">
-                        <p class="text-white font-medium truncate" id="admin-username-display">Admin</p>
-                        <p class="text-xs text-slate-500">Administrador</p>
+        </div>
+
+        <!-- APP DASHBOARD -->
+        <div id="app-view" class="w-full h-full flex hidden">
+            <!-- Sidebar -->
+            <aside class="w-64 bg-slate-900 text-white flex flex-col h-full shadow-2xl relative z-20">
+                <div class="p-6 border-b border-slate-800 flex items-center gap-3">
+                    <div class="w-10 h-10 bg-brand-500 rounded-lg flex items-center justify-center shadow-inner">
+                        <i class="fa-solid fa-cube text-xl"></i>
+                    </div>
+                    <div>
+                        <h1 class="text-xl font-bold tracking-wide">Stockia</h1>
+                        <p id="user-role-display" class="text-xs text-brand-300 uppercase font-semibold mt-1">Rol</p>
                     </div>
                 </div>
-                <button onclick="window.openChangePasswordModal()" class="w-full flex items-center gap-3 px-4 py-2 text-sm text-slate-300 hover:text-white hover:bg-slate-800 rounded-lg transition-colors mb-1">
-                    <i class="fa-solid fa-key w-5 text-center"></i> Cambiar Contraseña
-                </button>
-                <button onclick="window.logout()" class="w-full flex items-center gap-3 px-4 py-2 text-sm text-red-400 hover:bg-slate-800 rounded-lg transition-colors">
-                    <i class="fa-solid fa-sign-out-alt w-5 text-center"></i> Cerrar Sesión
-                </button>
-            </div>
-        </aside>
-
-        <main class="flex-1 bg-slate-50 flex flex-col h-full overflow-hidden w-full relative">
-            <header class="md:hidden bg-white shadow-sm px-4 py-3 flex items-center justify-between z-20">
-                <div class="flex items-center gap-2">
-                    <i class="fa-solid fa-box-open text-brand-600"></i>
-                    <span class="font-bold text-slate-800">Stockia</span>
-                </div>
-                <button onclick="window.toggleSidebar()" class="text-slate-600 text-xl p-2">
-                    <i class="fa-solid fa-bars"></i>
-                </button>
-            </header>
-
-            <div class="flex-1 overflow-y-auto p-4 md:p-8 w-full" id="admin-content-area">
                 
-                <section id="sec-inventory" class="admin-section fade-in">
-                    <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-6 gap-4">
-                        <div>
-                            <h2 class="text-2xl font-bold text-slate-800">Inventario de Productos</h2>
-                            <p class="text-sm text-slate-500">Gestiona existencias y precios</p>
-                        </div>
-                        <div class="flex gap-2 w-full sm:w-auto">
-                            <button onclick="window.openAuditModal()" class="bg-slate-800 hover:bg-slate-900 text-white px-4 py-2 rounded-lg flex items-center justify-center gap-2 transition-colors shadow-sm whitespace-nowrap flex-1 sm:flex-none">
-                                <i class="fa-solid fa-file-pdf"></i> Auditoría
-                            </button>
-                            <button onclick="window.openProductModal()" class="bg-brand-600 hover:bg-brand-700 text-white px-4 py-2 rounded-lg flex items-center justify-center gap-2 transition-colors shadow-sm whitespace-nowrap flex-1 sm:flex-none">
-                                <i class="fa-solid fa-plus"></i> Nuevo
-                            </button>
-                        </div>
-                    </div>
-                    <div class="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden">
-                        <div class="overflow-x-auto">
-                            <table class="w-full text-left border-collapse">
-                                <thead>
-                                    <tr class="bg-slate-50 border-b border-slate-200 text-slate-600 text-sm">
-                                        <th class="py-3 px-4 font-medium">SKU</th>
-                                        <th class="py-3 px-4 font-medium">Nombre</th>
-                                        <th class="py-3 px-4 font-medium">Sección</th>
-                                        <th class="py-3 px-4 font-medium">Precio</th>
-                                        <th class="py-3 px-4 font-medium">Stock</th>
-                                        <th class="py-3 px-4 font-medium text-right">Acciones</th>
-                                    </tr>
-                                </thead>
-                                <tbody id="inventory-tbody" class="divide-y divide-slate-100 text-sm"></tbody>
-                            </table>
-                        </div>
-                    </div>
-                </section>
-
-                <section id="sec-categories" class="admin-section hidden fade-in">
-                    <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-6 gap-4">
-                        <div>
-                            <h2 class="text-2xl font-bold text-slate-800">Gestión de Secciones</h2>
-                            <p class="text-sm text-slate-500">Ej. Cafetería, Papelería, Aseo</p>
-                        </div>
-                        <button onclick="window.openCategoryModal()" class="bg-brand-600 hover:bg-brand-700 text-white px-4 py-2 rounded-lg flex items-center gap-2 transition-colors shadow-sm whitespace-nowrap">
-                            <i class="fa-solid fa-plus"></i> Nueva Sección
-                        </button>
-                    </div>
-                    <div class="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden">
-                        <div class="overflow-x-auto">
-                            <table class="w-full text-left border-collapse">
-                                <thead>
-                                    <tr class="bg-slate-50 border-b border-slate-200 text-slate-600 text-sm">
-                                        <th class="py-3 px-4 font-medium">Referencia</th>
-                                        <th class="py-3 px-4 font-medium">Nombre de la Sección</th>
-                                        <th class="py-3 px-4 font-medium text-right">Acciones</th>
-                                    </tr>
-                                </thead>
-                                <tbody id="categories-tbody" class="divide-y divide-slate-100 text-sm"></tbody>
-                            </table>
-                        </div>
-                    </div>
-                </section>
-
-                <section id="sec-reports" class="admin-section hidden fade-in">
-                    <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-6 gap-4">
-                        <div>
-                            <h2 class="text-2xl font-bold text-slate-800">Reportes Financieros</h2>
-                            <p class="text-sm text-slate-500">Resumen y Cierres en Tiempo Real</p>
-                        </div>
-                        <div class="flex gap-2 w-full sm:w-auto">
-                            <select id="report-time-filter" onchange="window.renderReports()" class="bg-white border border-slate-300 text-slate-700 px-4 py-2 rounded-lg focus:ring-2 focus:ring-brand-500 outline-none shadow-sm cursor-pointer">
-                                <option value="today">Hoy</option>
-                                <option value="week">Esta Semana</option>
-                                <option value="fortnight">Esta Quincena</option>
-                                <option value="month">Este Mes</option>
-                                <option value="all">Todo el Histórico</option>
-                            </select>
-                            <button onclick="window.generateDailyClose()" class="bg-emerald-600 hover:bg-emerald-700 text-white px-4 py-2 rounded-lg flex items-center gap-2 transition-colors shadow-sm whitespace-nowrap">
-                                <i class="fa-solid fa-file-invoice-dollar"></i> Cierre Diario PDF
-                            </button>
-                        </div>
-                    </div>
-
-                    <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
-                        <div class="bg-white p-6 rounded-xl shadow-sm border border-slate-200 border-l-4 border-l-brand-500">
-                            <p class="text-sm text-slate-500 font-medium mb-1">Transacciones</p>
-                            <h3 class="text-3xl font-bold text-slate-800" id="kpi-sales-count">0</h3>
-                        </div>
-                        <div class="bg-white p-6 rounded-xl shadow-sm border border-slate-200 border-l-4 border-l-emerald-500">
-                            <p class="text-sm text-slate-500 font-medium mb-1">Ingresos Totales</p>
-                            <h3 class="text-3xl font-bold text-emerald-600" id="kpi-sales-period">$0</h3>
-                        </div>
-                        <div class="bg-white p-6 rounded-xl shadow-sm border border-slate-200 border-l-4 border-l-indigo-500">
-                            <p class="text-sm text-slate-500 font-medium mb-1">Mejor Vendedor</p>
-                            <h3 class="text-xl font-bold text-indigo-600 truncate mt-1" id="kpi-top-seller">-</h3>
-                        </div>
-                    </div>
-
-                    <div class="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-6">
-                        <div class="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden lg:col-span-1">
-                            <div class="p-4 border-b border-slate-200 bg-slate-50">
-                                <h3 class="font-bold text-slate-700">Ventas por Sección</h3>
-                            </div>
-                            <div class="overflow-x-auto max-h-[300px] overflow-y-auto">
-                                <table class="w-full text-left border-collapse">
-                                    <thead>
-                                        <tr class="bg-slate-50 border-b border-slate-200 text-slate-600 text-sm">
-                                            <th class="py-3 px-4 font-medium">Categoría</th>
-                                            <th class="py-3 px-4 font-medium text-right">Ingresos</th>
-                                        </tr>
-                                    </thead>
-                                    <tbody id="reports-cat-tbody" class="divide-y divide-slate-100 text-sm"></tbody>
-                                </table>
-                            </div>
-                        </div>
-
-                        <div class="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden lg:col-span-2">
-                            <div class="p-4 border-b border-slate-200 bg-slate-50">
-                                <h3 class="font-bold text-slate-700">Historial de Transacciones</h3>
-                            </div>
-                            <div class="overflow-x-auto max-h-[300px] overflow-y-auto">
-                                <table class="w-full text-left border-collapse">
-                                    <thead class="bg-slate-50 sticky top-0 border-b border-slate-200 shadow-sm">
-                                        <tr class="text-slate-600 text-sm">
-                                            <th class="py-3 px-4 font-medium">Fecha</th>
-                                            <th class="py-3 px-4 font-medium">Vendedor</th>
-                                            <th class="py-3 px-4 font-medium">Artículos</th>
-                                            <th class="py-3 px-4 font-medium text-right">Total</th>
-                                        </tr>
-                                    </thead>
-                                    <tbody id="reports-tbody" class="divide-y divide-slate-100 text-sm"></tbody>
-                                </table>
-                            </div>
-                        </div>
-                    </div>
-                </section>
-
-                <section id="sec-users" class="admin-section hidden fade-in">
-                    <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-6 gap-4">
-                        <div>
-                            <h2 class="text-2xl font-bold text-slate-800">Cuentas de Vendedores</h2>
-                            <p class="text-sm text-slate-500">Asigna accesos por sección</p>
-                        </div>
-                        <button onclick="window.openUserModal()" class="bg-brand-600 hover:bg-brand-700 text-white px-4 py-2 rounded-lg flex items-center gap-2 transition-colors shadow-sm whitespace-nowrap">
-                            <i class="fa-solid fa-user-plus"></i> Nuevo Vendedor
-                        </button>
-                    </div>
-                    <div class="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden">
-                        <div class="overflow-x-auto">
-                            <table class="w-full text-left border-collapse">
-                                <thead>
-                                    <tr class="bg-slate-50 border-b border-slate-200 text-slate-600 text-sm">
-                                        <th class="py-3 px-4 font-medium">Usuario</th>
-                                        <th class="py-3 px-4 font-medium">Rol / Sección</th>
-                                        <th class="py-3 px-4 font-medium text-right">Acciones</th>
-                                    </tr>
-                                </thead>
-                                <tbody id="users-tbody" class="divide-y divide-slate-100 text-sm"></tbody>
-                            </table>
-                        </div>
-                    </div>
-                </section>
-            </div>
-        </main>
-    </div>
-
-    <!-- SELLER VIEW (POS) -->
-    <div id="view-seller" class="hidden flex-col h-full bg-slate-100 fade-in z-10 relative">
-        <header class="bg-white shadow-sm px-6 py-4 flex flex-col sm:flex-row items-start sm:items-center justify-between shrink-0 gap-4">
-            <div class="flex items-center gap-3">
-                <div class="bg-brand-100 w-10 h-10 rounded-lg flex items-center justify-center">
-                    <i class="fa-solid fa-cash-register text-brand-600 text-lg"></i>
-                </div>
-                <div>
-                    <h1 class="font-bold text-slate-800 leading-tight">Stockia - Punto de Venta</h1>
-                    <p class="text-xs text-slate-500" id="seller-username-display">Cajero</p>
-                </div>
-            </div>
-            <div class="flex items-center gap-2 w-full sm:w-auto">
-                <button onclick="window.showSellerSales()" class="flex-1 sm:flex-none bg-indigo-50 hover:bg-indigo-100 text-indigo-700 px-4 py-2 rounded-lg transition-colors flex justify-center items-center gap-2 text-sm font-medium border border-indigo-200">
-                    <i class="fa-solid fa-chart-pie"></i> Mis Ventas de Hoy
-                </button>
-                <button onclick="window.logout()" class="text-red-500 hover:text-red-700 hover:bg-red-50 px-3 py-2 rounded-lg transition-colors flex items-center justify-center gap-2 text-sm font-medium">
-                    <i class="fa-solid fa-sign-out-alt"></i> <span class="hidden sm:inline">Salir</span>
-                </button>
-            </div>
-        </header>
-
-        <div class="flex-1 flex flex-col md:flex-row overflow-hidden p-2 md:p-4 gap-4">
-            <div class="flex-1 bg-white rounded-xl shadow-sm border border-slate-200 flex flex-col overflow-hidden">
-                <div class="p-4 border-b border-slate-200">
-                    <div class="relative">
-                        <i class="fa-solid fa-search absolute left-3 top-1/2 -translate-y-1/2 text-slate-400"></i>
-                        <input type="text" id="pos-search" placeholder="Buscar productos en tu sección..." class="w-full pl-10 pr-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-brand-500 outline-none" oninput="window.renderPOSProducts()">
-                    </div>
-                </div>
-                <div class="flex-1 overflow-y-auto p-4 scrollbar-hide">
-                    <div id="pos-products-grid" class="grid grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4"></div>
-                </div>
-            </div>
-
-            <div class="w-full md:w-96 bg-white rounded-xl shadow-sm border border-slate-200 flex flex-col shrink-0 h-[50vh] md:h-auto">
-                <div class="p-4 border-b border-slate-200 bg-slate-50 rounded-t-xl">
-                    <h2 class="font-bold text-slate-800 flex items-center gap-2">
-                        <i class="fa-solid fa-shopping-cart text-slate-500"></i> Orden Actual
-                    </h2>
-                </div>
-                <div class="flex-1 overflow-y-auto p-2" id="pos-cart-items"></div>
-                <div class="p-4 border-t border-slate-200 bg-slate-50 rounded-b-xl shrink-0">
-                    <div class="flex justify-between items-center mb-4 text-lg">
-                        <span class="font-medium text-slate-600">Total:</span>
-                        <span class="font-bold text-brand-700 text-2xl" id="pos-total">$0</span>
-                    </div>
-                    <button onclick="window.processSale()" id="btn-process-sale" class="w-full bg-brand-600 hover:bg-brand-700 disabled:opacity-50 text-white font-bold py-3 rounded-lg transition-colors flex justify-center items-center gap-2 shadow-md">
-                        <i class="fa-solid fa-check-circle"></i> Completar Venta
+                <div class="p-4 border-b border-slate-800">
+                    <p class="text-sm text-slate-400">Usuario actual</p>
+                    <p id="current-username" class="font-medium truncate mb-2">user@stockia.com</p>
+                    <!-- Botón Cambiar Contraseña (Solo Admins) -->
+                    <button id="btn-change-pass" onclick="window.openChangePasswordModal()" class="hidden w-full text-left text-xs text-slate-300 hover:text-white flex items-center gap-2 py-1 px-2 rounded hover:bg-slate-800 transition-colors">
+                        <i class="fa-solid fa-key"></i> Cambiar contraseña
                     </button>
                 </div>
-            </div>
+
+                <nav id="sidebar-nav" class="flex-1 p-4 space-y-2 overflow-y-auto">
+                    <!-- Nav items injected via JS based on role -->
+                </nav>
+
+                <div class="p-4 border-t border-slate-800">
+                    <button onclick="window.logout()" class="w-full flex items-center gap-3 px-4 py-2 text-slate-300 hover:text-white hover:bg-red-500/20 rounded-lg transition-colors">
+                        <i class="fa-solid fa-right-from-bracket"></i>
+                        <span>Cerrar Sesión</span>
+                    </button>
+                </div>
+            </aside>
+
+            <!-- Main Content Area -->
+            <main class="flex-1 bg-slate-50 flex flex-col h-full relative overflow-hidden">
+                <!-- Header -->
+                <header class="bg-white shadow-sm h-16 flex items-center justify-between px-8 border-b border-slate-200 z-10 shrink-0">
+                    <h2 id="page-title" class="text-xl font-bold text-slate-800">Dashboard</h2>
+                    <div id="header-actions"></div>
+                </header>
+
+                <!-- Dynamic Content -->
+                <div id="content-area" class="flex-1 p-8 overflow-y-auto">
+                    <!-- Views injected here -->
+                </div>
+            </main>
         </div>
     </div>
 
-    <!-- FIREBASE MODULE LOGIC -->
+    <!-- Sistema de Notificaciones (Toast) -->
+    <div id="toast-container" class="fixed bottom-4 right-4 z-50 flex flex-col gap-2"></div>
+
+    <!-- Modal Base -->
+    <div id="modal-backdrop" class="fixed inset-0 bg-slate-900/50 backdrop-blur-sm z-50 hidden flex items-center justify-center opacity-0 transition-opacity">
+        <div id="modal-content" class="bg-white rounded-2xl shadow-2xl w-full max-w-md p-6 transform scale-95 transition-transform">
+            <!-- Modal dinámico -->
+        </div>
+    </div>
+
+    <!-- Lógica de la Aplicación -->
     <script type="module">
-        import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
-        import { getAuth, signInAnonymously } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
-        import { getFirestore, doc, setDoc, deleteDoc, onSnapshot, collection } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
-
-        // FIREBASE CONFIG (Provided)
-        const firebaseConfig = {
-            apiKey: "AIzaSyCnSspkKiVa9nTgpyuwgZs_HS5uHNuGTeQ",
-            authDomain: "stockia-8c34a.firebaseapp.com",
-            projectId: "stockia-8c34a",
-            storageBucket: "stockia-8c34a.firebasestorage.app",
-            messagingSenderId: "4951354221",
-            appId: "1:4951354221:web:5e2bd1fd766f0778fa8864"
-        };
-
-        const app = initializeApp(firebaseConfig);
-        const auth = getAuth(app);
-        const db = getFirestore(app);
-
-        // Strict Storage Rules Apply: Project ID required pathing.
-        const APP_ID = 'stockia-8c34a';
-        const BASE_PATH = `artifacts/${APP_ID}/public/data`;
-
-        // GLOBAL STATE
-        const state = {
+        // Estado en Memoria
+        let state = {
+            users: [
+                { id: 'sa1', username: 'luis@stockia.com', password: 'Lm17@5**', role: 'superadmin' }
+            ],
+            categories: [], // {id, name}
+            products: [], // {id, categoryId, name, price, stock}
+            sales: [], // {id, sellerId, sellerName, categoryId, items:[], total, date, timestamp}
             currentUser: null,
-            users: [],
-            categories: [],
-            products: [],
-            sales: [],
-            cart: [],
-            closingNotified: false
+            cart: [] // Para el POS del vendedor
         };
 
-        // UI UTILS
-        const formatMoney = (amount) => new Intl.NumberFormat('es-CO', { style: 'currency', currency: 'COP', minimumFractionDigits: 0 }).format(amount);
-        const formatDate = (dateString) => new Date(dateString).toLocaleString('es-CO');
+        // Generador de IDs
+        const generateId = () => Math.random().toString(36).substr(2, 9);
 
-        window.showToast = (message, type = 'success') => {
+        // --- SISTEMA DE TOAST ---
+        window.showToast = (msg, type = 'success') => {
             const container = document.getElementById('toast-container');
             const toast = document.createElement('div');
-            const bgClass = type === 'success' ? 'bg-emerald-500' : type === 'error' ? 'bg-red-500' : type === 'warning' ? 'bg-amber-500' : 'bg-blue-500';
-            const iconClass = type === 'success' ? 'fa-check-circle' : type === 'error' ? 'fa-times-circle' : 'fa-info-circle';
-            toast.className = `${bgClass} text-white px-4 py-3 rounded-lg shadow-lg flex items-center gap-3 transform transition-all duration-300 translate-x-full opacity-0 max-w-sm`;
-            toast.innerHTML = `<i class="fa-solid ${iconClass}"></i> <span class="text-sm font-medium">${message}</span>`;
+            const color = type === 'success' ? 'bg-green-500' : 'bg-red-500';
+            const icon = type === 'success' ? 'fa-check-circle' : 'fa-circle-exclamation';
+            
+            toast.className = `${color} text-white px-4 py-3 rounded-lg shadow-lg flex items-center gap-3 transform translate-y-10 opacity-0 transition-all duration-300`;
+            toast.innerHTML = `<i class="fa-solid ${icon}"></i> <span>${msg}</span>`;
+            
             container.appendChild(toast);
-            setTimeout(() => toast.classList.remove('translate-x-full', 'opacity-0'), 10);
-            setTimeout(() => { toast.classList.add('translate-x-full', 'opacity-0'); setTimeout(() => toast.remove(), 300); }, 3000);
+            
+            requestAnimationFrame(() => {
+                toast.classList.remove('translate-y-10', 'opacity-0');
+            });
+            
+            setTimeout(() => {
+                toast.classList.add('opacity-0', 'translate-y-2');
+                setTimeout(() => toast.remove(), 300);
+            }, 3000);
         };
 
-        window.toggleSidebar = () => {
-            const sidebar = document.getElementById('admin-sidebar');
-            sidebar.classList.toggle('-translate-x-full');
-        };
-
+        // --- MANEJO DE MODALES ---
         window.openModal = (htmlContent) => {
-            const overlay = document.getElementById('modal-overlay');
+            const backdrop = document.getElementById('modal-backdrop');
             const content = document.getElementById('modal-content');
             content.innerHTML = htmlContent;
-            overlay.classList.remove('hidden');
-            setTimeout(() => { content.classList.remove('scale-95', 'opacity-0'); content.classList.add('scale-100', 'opacity-100'); }, 10);
+            
+            backdrop.classList.remove('hidden');
+            // Trigger reflow
+            void backdrop.offsetWidth;
+            backdrop.classList.remove('opacity-0');
+            content.classList.remove('scale-95');
         };
 
         window.closeModal = () => {
-            const overlay = document.getElementById('modal-overlay');
+            const backdrop = document.getElementById('modal-backdrop');
             const content = document.getElementById('modal-content');
-            content.classList.remove('scale-100', 'opacity-100'); content.classList.add('scale-95', 'opacity-0');
-            setTimeout(() => { overlay.classList.add('hidden'); }, 200);
+            
+            backdrop.classList.add('opacity-0');
+            content.classList.add('scale-95');
+            
+            setTimeout(() => {
+                backdrop.classList.add('hidden');
+            }, 300);
         };
 
-        // FIREBASE INITIALIZATION & SYNC
-        async function initFirebase() {
-            try {
-                await signInAnonymously(auth); // Requires Auth before Firestore
+        // --- NAVEGACIÓN Y RENDERIZADO DE VISTAS ---
+        const views = {
+            superadmin: [
+                { id: 'sa-sedes', label: 'Gestión de Sedes (Admins)', icon: 'fa-building', render: () => renderSuperAdminSedes() }
+            ],
+            admin: [
+                { id: 'inv', label: 'Inventario', icon: 'fa-box', render: () => renderInventory() },
+                { id: 'cat', label: 'Categorías', icon: 'fa-layer-group', render: () => renderCategories() },
+                { id: 'users', label: 'Vendedores', icon: 'fa-users', render: () => renderUsers() },
+                { id: 'rep', label: 'Reportes y Cierre', icon: 'fa-chart-pie', render: () => renderReports() }
+            ],
+            seller: [
+                { id: 'pos', label: 'Punto de Venta', icon: 'fa-cash-register', render: () => renderPOS() }
+            ]
+        };
 
-                const collectionsToSync = ['users', 'categories', 'products', 'sales'];
-                let loadedCount = 0;
-
-                collectionsToSync.forEach(colName => {
-                    onSnapshot(collection(db, BASE_PATH, colName), (snap) => {
-                        state[colName] = snap.docs.map(d => ({ ...d.data() }));
-                        
-                        // Special triggers on state changes
-                        if (colName === 'users') ensureSuperAdmin();
-                        
-                        // UI Refresh triggers
-                        if (state.currentUser) {
-                            if (state.currentUser.role === 'superadmin' && colName === 'users') window.renderSuperAdmin();
-                            if (state.currentUser.role === 'admin') {
-                                if (colName === 'products' || colName === 'categories') window.renderInventory();
-                                if (colName === 'categories') window.renderCategories();
-                                if (colName === 'users' || colName === 'categories') window.renderUsers();
-                                if (colName === 'sales') window.renderReports();
-                            }
-                            if (state.currentUser.role === 'seller' && (colName === 'products' || colName === 'categories')) {
-                                window.renderPOSProducts();
-                            }
-                        }
-
-                        // Remove loading overlay when first sweeps complete
-                        if(loadedCount < collectionsToSync.length) {
-                            loadedCount++;
-                            if(loadedCount === collectionsToSync.length) {
-                                const overlay = document.getElementById('loading-overlay');
-                                overlay.classList.add('opacity-0', 'scale-105', 'pointer-events-none');
-                                setTimeout(() => {
-                                    overlay.classList.add('hidden');
-                                    if(!state.currentUser) document.getElementById('view-login').classList.remove('hidden');
-                                }, 700);
-                            }
-                        }
-                    }, (err) => console.error(`Error loading ${colName}:`, err));
-                });
-            } catch (err) {
-                console.error("Firebase Auth Error:", err);
-                window.showToast("Error de conexión a la base de datos.", "error");
+        window.loadView = (role, viewId) => {
+            // Update active state in sidebar
+            document.querySelectorAll('#sidebar-nav button').forEach(b => {
+                b.classList.remove('bg-brand-600', 'text-white', 'shadow-md');
+                b.classList.add('text-slate-300', 'hover:bg-slate-800');
+            });
+            const activeBtn = document.getElementById(`nav-${viewId}`);
+            if(activeBtn) {
+                activeBtn.classList.remove('text-slate-300', 'hover:bg-slate-800');
+                activeBtn.classList.add('bg-brand-600', 'text-white', 'shadow-md');
             }
-        }
 
-        async function ensureSuperAdmin() {
-            const saExists = state.users.some(u => u.username === 'luis@stockia.com');
-            if (!saExists) {
-                const saDocId = "usr_luis_superadmin";
-                await setDoc(doc(db, BASE_PATH, 'users', saDocId), {
-                    id: saDocId, username: 'luis@stockia.com', password: 'Lm17@5**', role: 'superadmin'
-                });
+            const view = views[role].find(v => v.id === viewId);
+            if(view) {
+                document.getElementById('page-title').innerText = view.label;
+                document.getElementById('header-actions').innerHTML = '';
+                document.getElementById('content-area').innerHTML = view.render();
             }
-        }
+        };
 
-        // AUTH & ROUTING
+        // --- AUTH ---
         window.handleLogin = (e) => {
             e.preventDefault();
-            const u = document.getElementById('login-user').value.trim();
+            // Toma lo que escribió, lo pasa a minúscula y corta si escribió @
+            const rawUser = document.getElementById('login-user').value.trim().toLowerCase().split('@')[0];
+            const u = rawUser + '@stockia.com';
             const p = document.getElementById('login-pass').value.trim();
+            
             const user = state.users.find(x => x.username === u && x.password === p);
             
             if(user) {
                 state.currentUser = user;
-                document.getElementById('login-form').reset();
-                window.showToast(`Bienvenido ${user.username}`, 'success');
-                window.renderApp();
+                document.getElementById('login-user').value = '';
+                document.getElementById('login-pass').value = '';
+                initApp();
             } else {
-                window.showToast('Usuario o contraseña incorrectos', 'error');
+                window.showToast('Credenciales incorrectas', 'error');
             }
         };
 
         window.logout = () => {
             state.currentUser = null;
-            state.cart = [];
-            window.renderApp();
+            document.getElementById('app-view').classList.add('hidden');
+            document.getElementById('login-view').classList.remove('hidden');
         };
 
-        window.renderApp = () => {
-            ['view-login', 'view-superadmin', 'view-admin', 'view-seller'].forEach(id => document.getElementById(id).classList.add('hidden'));
-
-            if (!state.currentUser) {
-                document.getElementById('view-login').classList.remove('hidden');
-            } else if (state.currentUser.role === 'superadmin') {
-                document.getElementById('view-superadmin').classList.remove('hidden');
-                document.getElementById('sa-username-display').innerText = state.currentUser.username;
-                window.renderSuperAdmin();
-            } else if (state.currentUser.role === 'admin') {
-                document.getElementById('view-admin').classList.remove('hidden');
-                document.getElementById('admin-username-display').innerText = state.currentUser.username;
-                window.switchAdminTab('inventory');
-                startTimeChecker();
-            } else if (state.currentUser.role === 'seller') {
-                document.getElementById('view-seller').classList.remove('hidden');
-                const catName = state.categories.find(c => c.id === state.currentUser.categoryId)?.name || 'General';
-                document.getElementById('seller-username-display').innerText = `Vendedor: ${state.currentUser.username} | Sección: ${catName}`;
-                state.cart = [];
-                window.renderPOSProducts();
-                window.renderCart();
-            }
-        };
-
-        // SUPER ADMIN FUNCTIONS
-        window.renderSuperAdmin = () => {
-            const tbody = document.getElementById('sa-admins-tbody');
-            tbody.innerHTML = '';
-            const admins = state.users.filter(u => u.role === 'admin');
+        const initApp = () => {
+            const user = state.currentUser;
+            document.getElementById('login-view').classList.add('hidden');
+            document.getElementById('app-view').classList.remove('hidden');
             
-            if(admins.length === 0) {
-                tbody.innerHTML = `<tr><td colspan="4" class="text-center py-8 text-slate-500">No hay administradores de sedes creados.</td></tr>`;
-                return;
-            }
-
-            admins.forEach(u => {
-                const tr = document.createElement('tr');
-                tr.innerHTML = `
-                    <td class="py-3 px-4 text-slate-500 font-mono text-xs">...${u.id.substring(u.id.length-6)}</td>
-                    <td class="py-3 px-4 font-medium text-slate-800">${u.username}</td>
-                    <td class="py-3 px-4 font-mono text-slate-500 text-xs">••••••••</td>
-                    <td class="py-3 px-4 text-right">
-                        <button onclick="window.confirmDeleteUser('${u.id}')" class="text-red-500 hover:text-red-700 bg-red-50 p-2 rounded"><i class="fa-solid fa-trash-can"></i></button>
-                    </td>
-                `;
-                tbody.appendChild(tr);
-            });
-        };
-
-        window.openSuperAdminUserModal = () => {
-            const html = `
-                <div class="flex justify-between items-center mb-4">
-                    <h3 class="text-xl font-bold text-slate-800">Nuevo Administrador</h3>
-                    <button onclick="window.closeModal()" class="text-slate-400 hover:text-slate-600"><i class="fa-solid fa-times text-xl"></i></button>
-                </div>
-                <form onsubmit="window.saveUser(event, 'admin')" class="space-y-4">
-                    <div>
-                        <label class="block text-sm font-medium text-slate-700 mb-1">Correo Electrónico</label>
-                        <input type="email" id="u-name" required class="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-brand-500 outline-none">
-                    </div>
-                    <div>
-                        <label class="block text-sm font-medium text-slate-700 mb-1">Contraseña</label>
-                        <input type="text" id="u-pass" required class="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-brand-500 outline-none">
-                    </div>
-                    <div class="flex justify-end gap-2 mt-6">
-                        <button type="button" onclick="window.closeModal()" class="px-4 py-2 text-slate-600 bg-slate-100 hover:bg-slate-200 rounded-lg">Cancelar</button>
-                        <button type="submit" class="px-4 py-2 text-white bg-brand-600 hover:bg-brand-700 rounded-lg font-medium">Crear Admin</button>
-                    </div>
-                </form>
-            `;
-            window.openModal(html);
-        };
-
-        // ADMIN TAB ROUTING
-        window.switchAdminTab = (tabId) => {
-            document.querySelectorAll('.admin-tab-btn').forEach(btn => {
-                btn.classList.remove('bg-brand-600', 'text-white'); btn.classList.add('hover:bg-slate-800');
-                if(btn.dataset.target === tabId) { btn.classList.add('bg-brand-600', 'text-white'); btn.classList.remove('hover:bg-slate-800'); }
-            });
-            document.querySelectorAll('.admin-section').forEach(sec => sec.classList.add('hidden'));
-            document.getElementById(`sec-${tabId}`).classList.remove('hidden');
-
-            if(tabId === 'inventory') window.renderInventory();
-            if(tabId === 'categories') window.renderCategories();
-            if(tabId === 'reports') window.renderReports();
-            if(tabId === 'users') window.renderUsers();
-            if(window.innerWidth < 768) document.getElementById('admin-sidebar').classList.add('-translate-x-full');
-        };
-
-        // INVENTORY
-        window.renderInventory = () => {
-            const tbody = document.getElementById('inventory-tbody');
-            tbody.innerHTML = '';
-            if(state.products.length === 0) {
-                tbody.innerHTML = `<tr><td colspan="6" class="text-center py-8 text-slate-500">No hay productos en el inventario.</td></tr>`;
-                return;
-            }
-            state.products.forEach(p => {
-                const stockClass = p.stock <= 5 ? 'text-red-500 font-bold' : 'text-slate-600';
-                const catName = state.categories.find(c => c.id === p.categoryId)?.name || '<span class="text-red-500">Sin Asignar</span>';
-                tbody.innerHTML += `
-                    <tr>
-                        <td class="py-3 px-4">${p.sku}</td>
-                        <td class="py-3 px-4 font-medium text-slate-800">${p.name}</td>
-                        <td class="py-3 px-4 text-xs"><span class="bg-slate-100 text-slate-600 px-2 py-1 rounded font-medium">${catName}</span></td>
-                        <td class="py-3 px-4">${formatMoney(p.price)}</td>
-                        <td class="py-3 px-4 ${stockClass}">${p.stock}</td>
-                        <td class="py-3 px-4 text-right whitespace-nowrap">
-                            <button onclick="window.openProductModal('${p.id}')" class="text-blue-500 hover:text-blue-700 bg-blue-50 p-2 rounded mr-1" title="Editar"><i class="fa-solid fa-edit"></i></button>
-                            <button onclick="window.confirmDeleteProduct('${p.id}')" class="text-red-500 hover:text-red-700 bg-red-50 p-2 rounded" title="Eliminar"><i class="fa-solid fa-trash-can"></i></button>
-                        </td>
-                    </tr>
-                `;
-            });
-        };
-
-        window.openProductModal = (id = null) => {
-            let p = id ? state.products.find(x => x.id === id) : { sku: '', name: '', price: '', stock: '', categoryId: '' };
-            let catOptions = state.categories.map(c => `<option value="${c.id}" ${p.categoryId === c.id ? 'selected' : ''}>${c.name}</option>`).join('');
-            if (!catOptions) catOptions = '<option value="">⚠️ Crea una sección primero</option>';
-
-            const html = `
-                <div class="flex justify-between items-center mb-4">
-                    <h3 class="text-xl font-bold text-slate-800">${id ? 'Editar Producto' : 'Nuevo Producto'}</h3>
-                    <button onclick="window.closeModal()" class="text-slate-400 hover:text-slate-600"><i class="fa-solid fa-times text-xl"></i></button>
-                </div>
-                <form onsubmit="window.saveProduct(event, '${id || ''}')" class="space-y-4">
-                    <div class="grid grid-cols-2 gap-4">
-                        <div>
-                            <label class="block text-sm font-medium text-slate-700 mb-1">SKU / Código</label>
-                            <input type="text" id="p-sku" value="${p.sku}" required class="w-full px-3 py-2 border rounded-lg outline-none">
-                        </div>
-                        <div>
-                            <label class="block text-sm font-medium text-slate-700 mb-1">Sección</label>
-                            <select id="p-cat" required class="w-full px-3 py-2 border rounded-lg bg-white outline-none">${catOptions}</select>
-                        </div>
-                    </div>
-                    <div>
-                        <label class="block text-sm font-medium text-slate-700 mb-1">Nombre del Producto</label>
-                        <input type="text" id="p-name" value="${p.name}" required class="w-full px-3 py-2 border rounded-lg outline-none">
-                    </div>
-                    <div class="grid grid-cols-2 gap-4">
-                        <div>
-                            <label class="block text-sm font-medium text-slate-700 mb-1">Precio (COP)</label>
-                            <input type="number" id="p-price" value="${p.price}" min="0" required class="w-full px-3 py-2 border rounded-lg outline-none">
-                        </div>
-                        <div>
-                            <label class="block text-sm font-medium text-slate-700 mb-1">Stock Actual</label>
-                            <input type="number" id="p-stock" value="${p.stock}" min="0" required class="w-full px-3 py-2 border rounded-lg outline-none">
-                        </div>
-                    </div>
-                    <div class="flex justify-end gap-2 mt-6">
-                        <button type="button" onclick="window.closeModal()" class="px-4 py-2 text-slate-600 bg-slate-100 hover:bg-slate-200 rounded-lg">Cancelar</button>
-                        <button type="submit" class="px-4 py-2 text-white bg-brand-600 hover:bg-brand-700 rounded-lg">Guardar</button>
-                    </div>
-                </form>
-            `;
-            window.openModal(html);
-        };
-
-        window.saveProduct = async (e, existingId) => {
-            e.preventDefault();
-            const catId = document.getElementById('p-cat').value;
-            if(!catId) return window.showToast('Debe asignar una sección', 'error');
-
-            const id = existingId || "prod_" + Date.now().toString();
-            const payload = {
-                id: id,
-                sku: document.getElementById('p-sku').value.trim(),
-                name: document.getElementById('p-name').value.trim(),
-                price: parseFloat(document.getElementById('p-price').value),
-                stock: parseInt(document.getElementById('p-stock').value),
-                categoryId: catId
-            };
-
-            await setDoc(doc(db, BASE_PATH, 'products', id), payload);
-            window.closeModal();
-            window.showToast(existingId ? 'Producto Actualizado' : 'Producto Creado');
-        };
-
-        window.confirmDeleteProduct = (id) => {
-            const p = state.products.find(x => x.id === id);
-            window.openModal(`
-                <div class="text-center p-4">
-                    <div class="w-16 h-16 bg-red-100 text-red-600 rounded-full flex justify-center items-center mx-auto mb-4 text-2xl"><i class="fa-solid fa-triangle-exclamation"></i></div>
-                    <h3 class="text-xl font-bold mb-2">Eliminar Producto</h3>
-                    <p class="text-slate-600 text-sm mb-6">¿Eliminar <b>${p.name}</b> permanentemente?</p>
-                    <div class="flex gap-3">
-                        <button onclick="window.closeModal()" class="flex-1 py-2 bg-slate-100 rounded-lg">Cancelar</button>
-                        <button onclick="window.executeDeleteProduct('${id}')" class="flex-1 py-2 bg-red-600 text-white rounded-lg">Sí, Eliminar</button>
-                    </div>
-                </div>
-            `);
-        };
-
-        window.executeDeleteProduct = async (id) => {
-            await deleteDoc(doc(db, BASE_PATH, 'products', id));
-            window.closeModal();
-            window.showToast('Producto eliminado');
-        };
-
-        // CATEGORIES
-        window.renderCategories = () => {
-            const tbody = document.getElementById('categories-tbody');
-            tbody.innerHTML = '';
-            if(state.categories.length === 0) {
-                tbody.innerHTML = `<tr><td colspan="3" class="text-center py-8 text-slate-500">No hay secciones registradas.</td></tr>`;
-                return;
-            }
-            state.categories.forEach(c => {
-                tbody.innerHTML += `
-                    <tr>
-                        <td class="py-3 px-4 text-slate-500 font-mono text-xs">...${c.id.substring(c.id.length-6)}</td>
-                        <td class="py-3 px-4 font-medium text-slate-800">${c.name}</td>
-                        <td class="py-3 px-4 text-right">
-                            <button onclick="window.confirmDeleteCategory('${c.id}')" class="text-red-500 hover:text-red-700 bg-red-50 p-2 rounded"><i class="fa-solid fa-trash-can"></i></button>
-                        </td>
-                    </tr>
-                `;
-            });
-        };
-
-        window.openCategoryModal = () => {
-            window.openModal(`
-                <div class="flex justify-between items-center mb-4">
-                    <h3 class="text-xl font-bold">Nueva Sección</h3>
-                    <button onclick="window.closeModal()" class="text-slate-400 hover:text-slate-600"><i class="fa-solid fa-times"></i></button>
-                </div>
-                <form onsubmit="window.saveCategory(event)" class="space-y-4">
-                    <div>
-                        <label class="block text-sm font-medium mb-1">Nombre (Ej. Cafetería, Aseo)</label>
-                        <input type="text" id="c-name" required class="w-full px-3 py-2 border rounded-lg outline-none">
-                    </div>
-                    <div class="flex justify-end gap-2 mt-6">
-                        <button type="button" onclick="window.closeModal()" class="px-4 py-2 bg-slate-100 rounded-lg">Cancelar</button>
-                        <button type="submit" class="px-4 py-2 bg-brand-600 text-white rounded-lg">Guardar</button>
-                    </div>
-                </form>
-            `);
-        };
-
-        window.saveCategory = async (e) => {
-            e.preventDefault();
-            const id = "cat_" + Date.now().toString();
-            const name = document.getElementById('c-name').value.trim();
-            await setDoc(doc(db, BASE_PATH, 'categories', id), { id, name });
-            window.closeModal();
-            window.showToast('Sección Creada');
-        };
-
-        window.confirmDeleteCategory = (id) => {
-            if (state.products.some(p => p.categoryId === id)) {
-                return window.showToast('Error: Esta sección contiene productos.', 'error');
-            }
-            if (state.users.some(u => u.categoryId === id)) {
-                return window.showToast('Error: Hay vendedores asignados a esta sección.', 'error');
-            }
-            window.openModal(`
-                <div class="text-center p-4">
-                    <div class="w-16 h-16 bg-red-100 text-red-600 rounded-full flex justify-center items-center mx-auto mb-4 text-2xl"><i class="fa-solid fa-trash"></i></div>
-                    <h3 class="text-xl font-bold mb-2">Eliminar Sección</h3>
-                    <p class="text-slate-600 text-sm mb-6">¿Borrar definitivamente?</p>
-                    <div class="flex gap-3">
-                        <button onclick="window.closeModal()" class="flex-1 py-2 bg-slate-100 rounded-lg">Cancelar</button>
-                        <button onclick="window.executeDeleteCategory('${id}')" class="flex-1 py-2 bg-red-600 text-white rounded-lg">Sí, Eliminar</button>
-                    </div>
-                </div>
-            `);
-        };
-
-        window.executeDeleteCategory = async (id) => {
-            await deleteDoc(doc(db, BASE_PATH, 'categories', id));
-            window.closeModal();
-            window.showToast('Sección eliminada');
-        };
-
-        // USERS & SELLERS
-        window.renderUsers = () => {
-            const tbody = document.getElementById('users-tbody');
-            tbody.innerHTML = '';
-            const sellers = state.users.filter(u => u.role === 'seller');
-            if(sellers.length === 0) { tbody.innerHTML = `<tr><td colspan="3" class="text-center py-6 text-slate-500">Sin vendedores</td></tr>`; return; }
+            document.getElementById('current-username').innerText = user.username;
             
-            sellers.forEach(u => {
-                const catName = state.categories.find(c => c.id === u.categoryId)?.name || 'Sin Asignar';
-                const roleBadge = `<span class="bg-slate-100 text-slate-700 px-2 py-1 rounded text-xs font-bold uppercase">Vendedor</span> <span class="text-xs text-brand-600 font-medium ml-1">(${catName})</span>`;
-                tbody.innerHTML += `
-                    <tr>
-                        <td class="py-3 px-4 font-medium">${u.username}</td>
-                        <td class="py-3 px-4">${roleBadge}</td>
-                        <td class="py-3 px-4 text-right">
-                            <button class="text-slate-400 hover:text-red-500" onclick="window.confirmDeleteUser('${u.id}')"><i class="fa-solid fa-trash-can"></i></button>
-                        </td>
-                    </tr>
-                `;
-            });
-        };
-
-        window.openUserModal = () => {
-            let catOptions = state.categories.map(c => `<option value="${c.id}">${c.name}</option>`).join('');
-            if(!catOptions) catOptions = '<option value="">⚠️ Crea una sección primero</option>';
-            window.openModal(`
-                <div class="flex justify-between items-center mb-4">
-                    <h3 class="text-xl font-bold">Nuevo Vendedor</h3>
-                    <button onclick="window.closeModal()" class="text-slate-400 hover:text-slate-600"><i class="fa-solid fa-times"></i></button>
-                </div>
-                <form onsubmit="window.saveUser(event, 'seller')" class="space-y-4">
-                    <div>
-                        <label class="block text-sm font-medium mb-1">Usuario (Email/ID)</label>
-                        <input type="text" id="u-name" required class="w-full px-3 py-2 border rounded-lg outline-none">
-                    </div>
-                    <div>
-                        <label class="block text-sm font-medium mb-1">Contraseña</label>
-                        <input type="password" id="u-pass" required class="w-full px-3 py-2 border rounded-lg outline-none">
-                    </div>
-                    <div>
-                        <label class="block text-sm font-medium mb-1">Sección Asignada</label>
-                        <select id="u-cat" required class="w-full px-3 py-2 border rounded-lg bg-white outline-none">${catOptions}</select>
-                    </div>
-                    <div class="flex justify-end gap-2 mt-6">
-                        <button type="button" onclick="window.closeModal()" class="px-4 py-2 bg-slate-100 rounded-lg">Cancelar</button>
-                        <button type="submit" class="px-4 py-2 bg-brand-600 text-white rounded-lg">Crear Acceso</button>
-                    </div>
-                </form>
-            `);
-        };
-
-        window.saveUser = async (e, role) => {
-            e.preventDefault();
-            const username = document.getElementById('u-name').value.trim();
-            const password = document.getElementById('u-pass').value.trim();
-            
-            if(state.users.some(u => u.username === username)) return window.showToast('El usuario ya existe', 'error');
-
-            const id = "usr_" + Date.now().toString();
-            const payload = { id, username, password, role };
-            if (role === 'seller') {
-                const catId = document.getElementById('u-cat').value;
-                if(!catId) return window.showToast('Sección inválida', 'error');
-                payload.categoryId = catId;
+            // Mostrar botón de cambio de contraseña solo a Superadmin y Admin
+            const btnPass = document.getElementById('btn-change-pass');
+            if (user.role === 'superadmin' || user.role === 'admin') {
+                btnPass.classList.remove('hidden');
+            } else {
+                btnPass.classList.add('hidden');
             }
 
-            await setDoc(doc(db, BASE_PATH, 'users', id), payload);
-            window.closeModal();
-            window.showToast('Acceso creado exitosamente');
+            let roleDisplay = '';
+            if (user.role === 'superadmin') roleDisplay = 'Súper Administrador (HQ)';
+            else if (user.role === 'admin') roleDisplay = 'Administrador de Sede';
+            else roleDisplay = 'Vendedor';
+            
+            document.getElementById('user-role-display').innerText = roleDisplay;
+
+            // Build Navigation
+            const nav = document.getElementById('sidebar-nav');
+            nav.innerHTML = '';
+            views[user.role].forEach(view => {
+                const btn = document.createElement('button');
+                btn.id = `nav-${view.id}`;
+                btn.className = 'w-full flex items-center gap-3 px-4 py-3 rounded-xl transition-all text-left text-sm font-medium text-slate-300 hover:bg-slate-800';
+                btn.innerHTML = `<i class="fa-solid ${view.icon} w-5 text-center"></i> <span>${view.label}</span>`;
+                btn.onclick = () => window.loadView(user.role, view.id);
+                nav.appendChild(btn);
+            });
+
+            // Load default view
+            window.loadView(user.role, views[user.role][0].id);
         };
 
-        window.confirmDeleteUser = (id) => {
-            const u = state.users.find(x => x.id === id);
-            if(u.role === 'superadmin') return window.showToast('No se puede eliminar al SuperAdmin', 'error');
-            window.openModal(`
-                <div class="text-center p-4">
-                    <div class="w-16 h-16 bg-red-100 text-red-600 rounded-full flex justify-center items-center mx-auto mb-4 text-2xl"><i class="fa-solid fa-user-xmark"></i></div>
-                    <h3 class="text-xl font-bold mb-2">Eliminar Usuario</h3>
-                    <p class="text-slate-600 text-sm mb-6">¿Eliminar acceso para <b>${u.username}</b>?</p>
-                    <div class="flex gap-3">
-                        <button onclick="window.closeModal()" class="flex-1 py-2 bg-slate-100 rounded-lg">Cancelar</button>
-                        <button onclick="window.executeDeleteUser('${id}')" class="flex-1 py-2 bg-red-600 text-white rounded-lg">Sí, Eliminar</button>
-                    </div>
-                </div>
-            `);
-        };
-
-        window.executeDeleteUser = async (id) => {
-            await deleteDoc(doc(db, BASE_PATH, 'users', id));
-            window.closeModal();
-            window.showToast('Usuario eliminado');
-        };
-
+        // --- CAMBIO DE CONTRASEÑA ---
         window.openChangePasswordModal = () => {
             window.openModal(`
                 <div class="flex justify-between items-center mb-4">
@@ -942,320 +333,875 @@
                 <form onsubmit="window.saveNewPassword(event)" class="space-y-4">
                     <div>
                         <label class="block text-sm font-medium mb-1">Nueva Contraseña</label>
-                        <input type="password" id="new-pass" required class="w-full px-3 py-2 border rounded-lg outline-none">
+                        <input type="password" id="new-pass" required class="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-brand-500 outline-none" placeholder="Min. 4 caracteres">
                     </div>
                     <div>
                         <label class="block text-sm font-medium mb-1">Confirmar Contraseña</label>
-                        <input type="password" id="confirm-pass" required class="w-full px-3 py-2 border rounded-lg outline-none">
+                        <input type="password" id="confirm-pass" required class="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-brand-500 outline-none">
                     </div>
-                    <div class="flex justify-end gap-2 mt-6">
-                        <button type="button" onclick="window.closeModal()" class="px-4 py-2 bg-slate-100 rounded-lg">Cancelar</button>
-                        <button type="submit" class="px-4 py-2 bg-brand-600 text-white rounded-lg">Actualizar</button>
-                    </div>
+                    <button type="submit" class="w-full bg-brand-600 text-white font-semibold py-2 rounded-lg hover:bg-brand-700">Actualizar Contraseña</button>
                 </form>
             `);
         };
 
-        window.saveNewPassword = async (e) => {
+        window.saveNewPassword = (e) => {
             e.preventDefault();
             const p1 = document.getElementById('new-pass').value.trim();
             const p2 = document.getElementById('confirm-pass').value.trim();
-            
-            if (p1 !== p2) return window.showToast('Las contraseñas no coinciden', 'error');
-            if (p1.length < 6) return window.showToast('La contraseña debe tener al menos 6 caracteres', 'error');
 
-            try {
-                const updatedUser = { ...state.currentUser, password: p1 };
-                await setDoc(doc(db, BASE_PATH, 'users', state.currentUser.id), updatedUser);
-                state.currentUser.password = p1; // Actualizar el estado local
+            if(p1.length < 4) return window.showToast('La contraseña debe ser más larga', 'error');
+            if(p1 !== p2) return window.showToast('Las contraseñas no coinciden', 'error');
+
+            const userIndex = state.users.findIndex(u => u.id === state.currentUser.id);
+            if(userIndex > -1) {
+                state.users[userIndex].password = p1;
+                state.currentUser.password = p1;
+                window.showToast('Contraseña actualizada con éxito');
                 window.closeModal();
-                window.showToast('Contraseña actualizada exitosamente', 'success');
-            } catch (err) {
-                console.error("Error updating password:", err);
-                window.showToast('Error al actualizar la contraseña', 'error');
             }
         };
 
-        // POS & SELLER
-        window.renderPOSProducts = () => {
-            const grid = document.getElementById('pos-products-grid');
-            const search = document.getElementById('pos-search').value.toLowerCase();
-            grid.innerHTML = '';
+
+        // ==========================================
+        // VISTAS SUPERADMIN
+        // ==========================================
+        const renderSuperAdminSedes = () => {
+            document.getElementById('header-actions').innerHTML = `
+                <button onclick="window.openSuperAdminUserModal()" class="bg-brand-600 hover:bg-brand-700 text-white px-4 py-2 rounded-lg font-medium shadow-sm transition-colors text-sm flex items-center gap-2">
+                    <i class="fa-solid fa-plus"></i> Nueva Sede (Admin)
+                </button>
+            `;
+
+            const admins = state.users.filter(u => u.role === 'admin');
             
-            const filtered = state.products.filter(p => 
-                (p.name.toLowerCase().includes(search) || p.sku.toLowerCase().includes(search)) && p.categoryId === state.currentUser.categoryId
-            );
+            let html = `
+                <div class="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden">
+                    <table class="w-full text-left border-collapse">
+                        <thead>
+                            <tr class="bg-slate-50 border-b border-slate-200 text-slate-600 text-sm">
+                                <th class="p-4 font-semibold">Usuario Sede (Admin)</th>
+                                <th class="p-4 font-semibold">Contraseña</th>
+                                <th class="p-4 font-semibold text-right">Acciones</th>
+                            </tr>
+                        </thead>
+                        <tbody class="divide-y divide-slate-100">
+            `;
 
-            if(filtered.length === 0) {
-                grid.innerHTML = `<div class="col-span-full flex flex-col items-center py-16 text-slate-400"><i class="fa-solid fa-box-open text-4xl mb-3 opacity-30"></i><p>Sin productos disponibles</p></div>`;
-                return;
+            if(admins.length === 0) {
+                html += `<tr><td colspan="3" class="p-8 text-center text-slate-400">No hay sedes creadas.</td></tr>`;
+            } else {
+                admins.forEach(admin => {
+                    html += `
+                        <tr class="hover:bg-slate-50 transition-colors">
+                            <td class="p-4 font-medium text-slate-800">
+                                <div class="flex items-center gap-3">
+                                    <div class="w-8 h-8 rounded-full bg-indigo-100 text-indigo-600 flex items-center justify-center font-bold text-xs">A</div>
+                                    ${admin.username}
+                                </div>
+                            </td>
+                            <td class="p-4 text-slate-600 text-sm">
+                                <span class="bg-slate-100 px-2 py-1 rounded text-xs font-mono border border-slate-200">${admin.password}</span>
+                            </td>
+                            <td class="p-4 text-right">
+                                <button onclick="window.deleteUser('${admin.id}')" class="text-red-500 hover:text-red-700 p-2 rounded-lg hover:bg-red-50 transition-colors" title="Eliminar Admin">
+                                    <i class="fa-solid fa-trash"></i>
+                                </button>
+                            </td>
+                        </tr>
+                    `;
+                });
             }
 
-            filtered.forEach(p => {
-                const outOfStock = p.stock <= 0;
-                const card = document.createElement('div');
-                card.className = `border rounded-xl p-4 flex flex-col justify-between transition-all ${outOfStock ? 'bg-slate-50 border-slate-200 opacity-60' : 'bg-white border-slate-200 hover:border-brand-500 hover:shadow-md cursor-pointer'}`;
-                if(!outOfStock) card.onclick = () => window.addToCart(p.id);
-                card.innerHTML = `
-                    <div><div class="text-xs text-slate-400 mb-1">${p.sku}</div><h3 class="font-bold leading-tight mb-2">${p.name}</h3></div>
-                    <div class="mt-4 flex items-end justify-between"><div class="text-brand-600 font-bold">${formatMoney(p.price)}</div><div class="text-xs ${p.stock <= 5 && !outOfStock ? 'text-amber-500 font-bold' : 'text-slate-400'}">${outOfStock ? 'Agotado' : `Disp: ${p.stock}`}</div></div>
-                `;
-                grid.appendChild(card);
-            });
+            html += `</tbody></table></div>`;
+            return html;
         };
 
-        window.renderCart = () => {
-            const container = document.getElementById('pos-cart-items');
-            const totalEl = document.getElementById('pos-total');
-            const btnProcess = document.getElementById('btn-process-sale');
-            container.innerHTML = '';
-
-            if(state.cart.length === 0) {
-                container.innerHTML = `<div class="h-full flex flex-col items-center justify-center text-slate-400 p-6 text-center"><i class="fa-solid fa-basket-shopping text-4xl mb-3 opacity-50"></i><p>Agrega productos</p></div>`;
-                totalEl.innerText = '$0'; btnProcess.disabled = true; return;
-            }
-
-            let total = 0;
-            state.cart.forEach((item, index) => {
-                total += item.product.price * item.quantity;
-                container.innerHTML += `
-                    <div class="flex justify-between items-center p-3 mb-2 bg-white border border-slate-100 rounded-lg shadow-sm">
-                        <div class="flex-1 overflow-hidden pr-2">
-                            <p class="font-medium text-sm truncate">${item.product.name}</p>
-                            <p class="text-xs text-brand-600">${formatMoney(item.product.price)} c/u</p>
-                        </div>
-                        <div class="flex items-center gap-3">
-                            <div class="flex items-center bg-slate-100 rounded-md border border-slate-200">
-                                <button onclick="window.changeQty(${index}, -1)" class="w-7 h-7 flex items-center justify-center hover:text-brand-600"><i class="fa-solid fa-minus text-xs"></i></button>
-                                <span class="w-6 text-center text-sm font-bold">${item.quantity}</span>
-                                <button onclick="window.changeQty(${index}, 1)" class="w-7 h-7 flex items-center justify-center hover:text-brand-600"><i class="fa-solid fa-plus text-xs"></i></button>
-                            </div>
-                            <button onclick="window.removeFromCart(${index})" class="text-red-400 hover:text-red-600 p-1"><i class="fa-solid fa-trash-can"></i></button>
+        window.openSuperAdminUserModal = () => {
+            window.openModal(`
+                <div class="flex justify-between items-center mb-4">
+                    <h3 class="text-xl font-bold">Nuevo Administrador de Sede</h3>
+                    <button onclick="window.closeModal()" class="text-slate-400 hover:text-slate-600"><i class="fa-solid fa-times"></i></button>
+                </div>
+                <form onsubmit="window.saveUser(event, 'admin')" class="space-y-4">
+                    <div>
+                        <label class="block text-sm font-medium mb-1">Nombre de Usuario</label>
+                        <div class="flex items-center border border-slate-300 rounded-lg focus-within:ring-2 focus-within:ring-brand-500 bg-white overflow-hidden">
+                            <input type="text" id="u-name" required class="w-full px-3 py-2 outline-none" placeholder="ej. sede1">
+                            <span class="px-3 py-2 bg-slate-50 text-slate-500 border-l border-slate-200 text-sm">@stockia.com</span>
                         </div>
                     </div>
-                `;
-            });
-            totalEl.innerText = formatMoney(total); btnProcess.disabled = false;
+                    <div>
+                        <label class="block text-sm font-medium mb-1">Contraseña Inicial</label>
+                        <input type="text" id="u-pass" required class="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-brand-500 outline-none">
+                    </div>
+                    <button type="submit" class="w-full bg-brand-600 text-white font-semibold py-2 rounded-lg hover:bg-brand-700">Crear Administrador</button>
+                </form>
+            `);
         };
 
-        window.addToCart = (productId) => {
-            const product = state.products.find(p => p.id === productId);
-            if(!product || product.stock <= 0) return;
-            const existing = state.cart.find(i => i.product.id === productId);
-            if(existing) {
-                if(existing.quantity < product.stock) existing.quantity++;
-                else window.showToast('Stock máximo alcanzado', 'warning');
-            } else state.cart.push({ product: { ...product }, quantity: 1 });
-            window.renderCart();
+
+        // ==========================================
+        // VISTAS ADMIN
+        // ==========================================
+        
+        // --- INVENTARIO ---
+        const renderInventory = () => {
+            document.getElementById('header-actions').innerHTML = `
+                <div class="flex gap-2">
+                    <button onclick="window.openAuditModal()" class="bg-indigo-100 hover:bg-indigo-200 text-indigo-700 px-4 py-2 rounded-lg font-medium shadow-sm transition-colors text-sm flex items-center gap-2">
+                        <i class="fa-solid fa-file-pdf"></i> Auditoría PDF
+                    </button>
+                    <button onclick="window.openProductModal()" class="bg-brand-600 hover:bg-brand-700 text-white px-4 py-2 rounded-lg font-medium shadow-sm transition-colors text-sm flex items-center gap-2">
+                        <i class="fa-solid fa-plus"></i> Nuevo Producto
+                    </button>
+                </div>
+            `;
+
+            let html = `
+                <div class="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden">
+                    <table class="w-full text-left border-collapse">
+                        <thead>
+                            <tr class="bg-slate-50 border-b border-slate-200 text-slate-600 text-sm">
+                                <th class="p-4 font-semibold">Producto</th>
+                                <th class="p-4 font-semibold">Categoría</th>
+                                <th class="p-4 font-semibold text-right">Precio</th>
+                                <th class="p-4 font-semibold text-center">Stock</th>
+                                <th class="p-4 font-semibold text-right">Acciones</th>
+                            </tr>
+                        </thead>
+                        <tbody class="divide-y divide-slate-100">
+            `;
+
+            if(state.products.length === 0) {
+                html += `<tr><td colspan="5" class="p-8 text-center text-slate-400">No hay productos en inventario.</td></tr>`;
+            } else {
+                state.products.forEach(p => {
+                    const cat = state.categories.find(c => c.id === p.categoryId) || {name: 'Sin categoría'};
+                    html += `
+                        <tr class="hover:bg-slate-50 transition-colors">
+                            <td class="p-4 font-medium text-slate-800">${p.name}</td>
+                            <td class="p-4 text-sm text-slate-500">
+                                <span class="bg-slate-100 px-2 py-1 rounded border border-slate-200">${cat.name}</span>
+                            </td>
+                            <td class="p-4 text-right font-medium text-green-600">$${p.price.toLocaleString()}</td>
+                            <td class="p-4 text-center">
+                                <span class="${p.stock < 10 ? 'bg-red-100 text-red-700' : 'bg-green-100 text-green-700'} px-2 py-1 rounded-full text-xs font-bold">
+                                    ${p.stock}
+                                </span>
+                            </td>
+                            <td class="p-4 text-right">
+                                <button onclick="window.openProductModal('${p.id}')" class="text-blue-500 hover:text-blue-700 p-2 rounded-lg hover:bg-blue-50 mr-1"><i class="fa-solid fa-pen"></i></button>
+                                <button onclick="window.deleteProduct('${p.id}')" class="text-red-500 hover:text-red-700 p-2 rounded-lg hover:bg-red-50"><i class="fa-solid fa-trash"></i></button>
+                            </td>
+                        </tr>
+                    `;
+                });
+            }
+            html += `</tbody></table></div>`;
+            return html;
         };
 
-        window.changeQty = (idx, delta) => {
-            const item = state.cart[idx];
-            const maxStock = state.products.find(p => p.id === item.product.id).stock;
-            const newQty = item.quantity + delta;
-            if(newQty <= 0) window.removeFromCart(idx);
-            else if (newQty > maxStock) window.showToast('Sin stock suficiente', 'warning');
-            else { item.quantity = newQty; window.renderCart(); }
+        window.openProductModal = (id = null) => {
+            if(state.categories.length === 0) return window.showToast('Primero crea una Categoría', 'error');
+
+            const p = id ? state.products.find(x => x.id === id) : {name: '', price: '', stock: '', categoryId: ''};
+            
+            const catOptions = state.categories.map(c => 
+                `<option value="${c.id}" ${p.categoryId === c.id ? 'selected' : ''}>${c.name}</option>`
+            ).join('');
+
+            window.openModal(`
+                <div class="flex justify-between items-center mb-4">
+                    <h3 class="text-xl font-bold">${id ? 'Editar' : 'Nuevo'} Producto</h3>
+                    <button onclick="window.closeModal()" class="text-slate-400 hover:text-slate-600"><i class="fa-solid fa-times"></i></button>
+                </div>
+                <form onsubmit="window.saveProduct(event, '${id || ''}')" class="space-y-4">
+                    <div>
+                        <label class="block text-sm font-medium mb-1">Nombre</label>
+                        <input type="text" id="p-name" value="${p.name}" required class="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-brand-500 outline-none">
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium mb-1">Categoría</label>
+                        <select id="p-cat" required class="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-brand-500 outline-none">
+                            ${catOptions}
+                        </select>
+                    </div>
+                    <div class="grid grid-cols-2 gap-4">
+                        <div>
+                            <label class="block text-sm font-medium mb-1">Precio ($)</label>
+                            <input type="number" id="p-price" value="${p.price}" required min="0" class="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-brand-500 outline-none">
+                        </div>
+                        <div>
+                            <label class="block text-sm font-medium mb-1">Stock</label>
+                            <input type="number" id="p-stock" value="${p.stock}" required min="0" class="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-brand-500 outline-none">
+                        </div>
+                    </div>
+                    <button type="submit" class="w-full bg-brand-600 text-white font-semibold py-2 rounded-lg hover:bg-brand-700">Guardar</button>
+                </form>
+            `);
         };
 
-        window.removeFromCart = (idx) => { state.cart.splice(idx, 1); window.renderCart(); };
+        window.saveProduct = (e, id) => {
+            e.preventDefault();
+            const payload = {
+                name: document.getElementById('p-name').value,
+                categoryId: document.getElementById('p-cat').value,
+                price: parseFloat(document.getElementById('p-price').value),
+                stock: parseInt(document.getElementById('p-stock').value)
+            };
 
-        window.processSale = async () => {
-            if(state.cart.length === 0) return;
-            const btn = document.getElementById('btn-process-sale');
-            btn.disabled = true; btn.innerHTML = '<i class="fa-solid fa-circle-notch fa-spin"></i> Procesando...';
+            if(id) {
+                const idx = state.products.findIndex(x => x.id === id);
+                state.products[idx] = { ...state.products[idx], ...payload };
+            } else {
+                state.products.push({ id: generateId(), ...payload });
+            }
+            
+            window.closeModal();
+            window.showToast('Producto guardado');
+            window.loadView('admin', 'inv');
+        };
 
-            try {
-                // Double check stock locally
-                for(let item of state.cart) {
-                    const p = state.products.find(x => x.id === item.product.id);
-                    if(p.stock < item.quantity) {
-                        window.showToast(`Stock insuficiente para: ${p.name}`, 'error');
-                        btn.disabled = false; btn.innerHTML = '<i class="fa-solid fa-check-circle"></i> Completar Venta';
-                        return;
-                    }
-                }
+        window.deleteProduct = (id) => {
+            if(confirm("¿Seguro que deseas eliminar este producto?")) {
+                state.products = state.products.filter(p => p.id !== id);
+                window.showToast('Producto eliminado');
+                window.loadView('admin', 'inv');
+            }
+        };
 
-                let totalSale = 0;
-                const itemsSold = [];
-                const updates = [];
+        // --- CATEGORÍAS ---
+        const renderCategories = () => {
+            document.getElementById('header-actions').innerHTML = `
+                <button onclick="window.openCategoryModal()" class="bg-brand-600 hover:bg-brand-700 text-white px-4 py-2 rounded-lg font-medium shadow-sm transition-colors text-sm flex items-center gap-2">
+                    <i class="fa-solid fa-plus"></i> Nueva Categoría
+                </button>
+            `;
 
-                // Fire async writes for inventory updates
-                for(let item of state.cart) {
-                    const p = state.products.find(x => x.id === item.product.id);
-                    const newStock = p.stock - item.quantity;
-                    updates.push(setDoc(doc(db, BASE_PATH, 'products', p.id), { ...p, stock: newStock }));
+            let html = `<div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">`;
+            
+            if(state.categories.length === 0) {
+                html = `<div class="col-span-full p-8 text-center text-slate-400 bg-white rounded-xl border border-slate-200">No hay categorías. Crea una sección (ej. Cafetería).</div>`;
+            } else {
+                state.categories.forEach(c => {
+                    const prodCount = state.products.filter(p => p.categoryId === c.id).length;
+                    const sellerCount = state.users.filter(u => u.categoryId === c.id).length;
                     
-                    totalSale += (p.price * item.quantity);
-                    itemsSold.push({ id: p.id, name: p.name, price: p.price, qty: item.quantity });
-                }
+                    html += `
+                        <div class="bg-white p-5 rounded-xl shadow-sm border border-slate-200 flex flex-col justify-between">
+                            <div>
+                                <div class="flex justify-between items-start mb-2">
+                                    <h3 class="font-bold text-lg text-slate-800">${c.name}</h3>
+                                    <button onclick="window.deleteCategory('${c.id}')" class="text-red-400 hover:text-red-600"><i class="fa-solid fa-trash"></i></button>
+                                </div>
+                                <p class="text-sm text-slate-500 mb-1"><i class="fa-solid fa-box text-slate-400 w-4"></i> ${prodCount} Productos</p>
+                                <p class="text-sm text-slate-500"><i class="fa-solid fa-user text-slate-400 w-4"></i> ${sellerCount} Vendedores asignados</p>
+                            </div>
+                        </div>
+                    `;
+                });
+            }
+            html += `</div>`;
+            return html;
+        };
 
-                const saleId = "sale_" + Date.now().toString();
-                updates.push(setDoc(doc(db, BASE_PATH, 'sales', saleId), {
-                    id: saleId, date: new Date().toISOString(), sellerId: state.currentUser.id, items: itemsSold, total: totalSale
-                }));
+        window.openCategoryModal = () => {
+            window.openModal(`
+                <div class="flex justify-between items-center mb-4">
+                    <h3 class="text-xl font-bold">Nueva Categoría/Sección</h3>
+                    <button onclick="window.closeModal()" class="text-slate-400 hover:text-slate-600"><i class="fa-solid fa-times"></i></button>
+                </div>
+                <form onsubmit="window.saveCategory(event)" class="space-y-4">
+                    <div>
+                        <label class="block text-sm font-medium mb-1">Nombre de Sección</label>
+                        <input type="text" id="c-name" required placeholder="ej. Papelería, Cafetería..." class="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-brand-500 outline-none">
+                    </div>
+                    <button type="submit" class="w-full bg-brand-600 text-white font-semibold py-2 rounded-lg hover:bg-brand-700">Guardar</button>
+                </form>
+            `);
+        };
 
-                await Promise.all(updates);
-                
-                state.cart = [];
-                window.renderPOSProducts();
-                window.renderCart();
-                window.showToast('Venta exitosa', 'success');
-            } catch (err) {
-                console.error("Sale error:", err);
-                window.showToast('Error procesando la venta', 'error');
-            } finally {
-                btn.disabled = false; btn.innerHTML = '<i class="fa-solid fa-check-circle"></i> Completar Venta';
+        window.saveCategory = (e) => {
+            e.preventDefault();
+            const name = document.getElementById('c-name').value.trim();
+            state.categories.push({ id: generateId(), name });
+            window.closeModal();
+            window.showToast('Categoría creada');
+            window.loadView('admin', 'cat');
+        };
+
+        window.deleteCategory = (id) => {
+            if(state.products.some(p => p.categoryId === id)) {
+                return window.showToast('No puedes borrar una categoría con productos. Elimínalos primero.', 'error');
+            }
+            if(confirm("¿Borrar esta categoría?")) {
+                state.categories = state.categories.filter(c => c.id !== id);
+                window.showToast('Categoría eliminada');
+                window.loadView('admin', 'cat');
             }
         };
 
-        // REPORTS & CLOSING (Auditoria & Cierres adaptados a FB IDs)
-        window.renderReports = () => {
-            const timeFilter = document.getElementById('report-time-filter')?.value || 'today';
-            let filtered = state.sales;
+        // --- USUARIOS / VENDEDORES ---
+        const renderUsers = () => {
+            document.getElementById('header-actions').innerHTML = `
+                <button onclick="window.openUserModal()" class="bg-brand-600 hover:bg-brand-700 text-white px-4 py-2 rounded-lg font-medium shadow-sm transition-colors text-sm flex items-center gap-2">
+                    <i class="fa-solid fa-user-plus"></i> Nuevo Vendedor
+                </button>
+            `;
 
-            if (timeFilter !== 'all') {
-                const fd = new Date();
-                if (timeFilter === 'today') fd.setHours(0,0,0,0);
-                else if (timeFilter === 'week') fd.setDate(fd.getDate() - 7);
-                else if (timeFilter === 'fortnight') fd.setDate(fd.getDate() - 15);
-                else if (timeFilter === 'month') fd.setMonth(fd.getMonth() - 1);
-                filtered = state.sales.filter(s => new Date(s.date) >= fd);
+            const sellers = state.users.filter(u => u.role === 'seller');
+            
+            let html = `
+                <div class="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden">
+                    <table class="w-full text-left border-collapse">
+                        <thead>
+                            <tr class="bg-slate-50 border-b border-slate-200 text-slate-600 text-sm">
+                                <th class="p-4 font-semibold">Usuario (Vendedor)</th>
+                                <th class="p-4 font-semibold">Sección Asignada</th>
+                                <th class="p-4 font-semibold">Contraseña</th>
+                                <th class="p-4 font-semibold text-right">Acciones</th>
+                            </tr>
+                        </thead>
+                        <tbody class="divide-y divide-slate-100">
+            `;
+
+            if(sellers.length === 0) {
+                html += `<tr><td colspan="4" class="p-8 text-center text-slate-400">No hay vendedores creados.</td></tr>`;
+            } else {
+                sellers.forEach(u => {
+                    const cat = state.categories.find(c => c.id === u.categoryId) || {name: 'Sin asignar'};
+                    html += `
+                        <tr class="hover:bg-slate-50 transition-colors">
+                            <td class="p-4 font-medium text-slate-800">
+                                <div class="flex items-center gap-3">
+                                    <div class="w-8 h-8 rounded-full bg-blue-100 text-blue-600 flex items-center justify-center font-bold text-xs">V</div>
+                                    ${u.username}
+                                </div>
+                            </td>
+                            <td class="p-4 text-sm text-slate-500">
+                                <span class="bg-slate-100 px-2 py-1 rounded border border-slate-200">${cat.name}</span>
+                            </td>
+                            <td class="p-4 text-slate-600 text-sm">
+                                <span class="bg-slate-100 px-2 py-1 rounded text-xs font-mono border border-slate-200">${u.password}</span>
+                            </td>
+                            <td class="p-4 text-right">
+                                <button onclick="window.deleteUser('${u.id}')" class="text-red-500 hover:text-red-700 p-2 rounded-lg hover:bg-red-50 transition-colors">
+                                    <i class="fa-solid fa-trash"></i>
+                                </button>
+                            </td>
+                        </tr>
+                    `;
+                });
+            }
+
+            html += `</tbody></table></div>`;
+            return html;
+        };
+
+        window.openUserModal = () => {
+            let catOptions = state.categories.map(c => `<option value="${c.id}">${c.name}</option>`).join('');
+            if(!catOptions) catOptions = '<option value="">⚠️ Crea una sección primero</option>';
+            
+            window.openModal(`
+                <div class="flex justify-between items-center mb-4">
+                    <h3 class="text-xl font-bold">Nuevo Vendedor</h3>
+                    <button onclick="window.closeModal()" class="text-slate-400 hover:text-slate-600"><i class="fa-solid fa-times"></i></button>
+                </div>
+                <form onsubmit="window.saveUser(event, 'seller')" class="space-y-4">
+                    <div>
+                        <label class="block text-sm font-medium mb-1">Usuario</label>
+                        <div class="flex items-center border border-slate-300 rounded-lg focus-within:ring-2 focus-within:ring-brand-500 bg-white overflow-hidden">
+                            <input type="text" id="u-name" required class="w-full px-3 py-2 outline-none" placeholder="ej. vendedor1">
+                            <span class="px-3 py-2 bg-slate-50 text-slate-500 border-l border-slate-200 text-sm">@stockia.com</span>
+                        </div>
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium mb-1">Sección Asignada</label>
+                        <select id="u-cat" required class="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-brand-500 outline-none">
+                            ${catOptions}
+                        </select>
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium mb-1">Contraseña Inicial</label>
+                        <input type="text" id="u-pass" required class="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-brand-500 outline-none">
+                    </div>
+                    <button type="submit" class="w-full bg-brand-600 text-white font-semibold py-2 rounded-lg hover:bg-brand-700" ${state.categories.length === 0 ? 'disabled opacity-50' : ''}>Crear Vendedor</button>
+                </form>
+            `);
+        };
+
+        window.saveUser = (e, role) => {
+            e.preventDefault();
+            const rawName = document.getElementById('u-name').value.trim().toLowerCase().split('@')[0];
+            const username = rawName + '@stockia.com';
+            const password = document.getElementById('u-pass').value.trim();
+            
+            if(state.users.some(u => u.username === username)) return window.showToast('El usuario ya existe', 'error');
+
+            const payload = { id: generateId(), username, password, role };
+            
+            if(role === 'seller') {
+                payload.categoryId = document.getElementById('u-cat').value;
             }
             
-            const revenue = filtered.reduce((sum, s) => sum + s.total, 0);
-            document.getElementById('kpi-sales-count').innerText = filtered.length;
-            document.getElementById('kpi-sales-period').innerText = formatMoney(revenue);
+            state.users.push(payload);
+            window.closeModal();
+            window.showToast('Usuario creado con éxito');
             
-            const sellerTotals = {};
-            filtered.forEach(s => sellerTotals[s.sellerId] = (sellerTotals[s.sellerId] || 0) + s.total);
-            let topId = null, maxSale = 0;
-            for(const [id, tot] of Object.entries(sellerTotals)) if(tot > maxSale) { maxSale = tot; topId = id; }
-            document.getElementById('kpi-top-seller').innerText = topId ? (state.users.find(u => u.id === topId)?.username || 'Desc.') : '-';
+            if(state.currentUser.role === 'superadmin') window.loadView('superadmin', 'sa-sedes');
+            else window.loadView('admin', 'users');
+        };
 
-            // Cat Table
-            const catTbody = document.getElementById('reports-cat-tbody');
-            catTbody.innerHTML = '';
-            const catTotals = {};
-            filtered.forEach(s => {
-                const u = state.users.find(x => x.id === s.sellerId);
-                if(u && u.categoryId) catTotals[u.categoryId] = (catTotals[u.categoryId] || 0) + s.total;
-            });
-            for(const [cId, tot] of Object.entries(catTotals)) {
-                if(tot>0) catTbody.innerHTML += `<tr><td class="py-3 px-4">${state.categories.find(c=>c.id===cId)?.name || 'N/A'}</td><td class="py-3 px-4 text-right font-bold text-brand-600">${formatMoney(tot)}</td></tr>`;
+        window.deleteUser = (id) => {
+            if(confirm("¿Seguro que deseas eliminar este usuario? No podrá acceder más al sistema.")) {
+                state.users = state.users.filter(u => u.id !== id);
+                window.showToast('Usuario eliminado correctamente');
+                if(state.currentUser.role === 'superadmin') window.loadView('superadmin', 'sa-sedes');
+                else window.loadView('admin', 'users');
             }
+        };
 
-            // Sales Table
-            const tbody = document.getElementById('reports-tbody');
-            tbody.innerHTML = '';
-            const sorted = [...filtered].sort((a,b) => new Date(b.date) - new Date(a.date));
-            sorted.forEach(s => {
-                const itemsStr = s.items.map(i => `${i.qty}x ${i.name}`).join(', ');
-                tbody.innerHTML += `
-                    <tr>
-                        <td class="py-3 px-4">${formatDate(s.date)}</td>
-                        <td class="py-3 px-4 font-medium">${state.users.find(u=>u.id===s.sellerId)?.username || 'Desc.'}</td>
-                        <td class="py-3 px-4 text-xs text-slate-500 max-w-[150px] truncate" title="${itemsStr}">${itemsStr}</td>
-                        <td class="py-3 px-4 text-right font-bold">${formatMoney(s.total)}</td>
-                    </tr>
-                `;
-            });
+        // --- REPORTES Y AUDITORÍAS ---
+        const renderReports = () => {
+            document.getElementById('header-actions').innerHTML = `
+                <button onclick="window.openAuditModal()" class="bg-indigo-600 hover:bg-indigo-700 text-white px-4 py-2 rounded-lg font-medium shadow-sm transition-colors text-sm flex items-center gap-2">
+                    <i class="fa-solid fa-file-pdf"></i> Generar Auditoría PDF
+                </button>
+            `;
+
+            // Data preparation for charts/summary
+            const today = new Date().toLocaleDateString();
+            const todaySales = state.sales.filter(s => new Date(s.timestamp).toLocaleDateString() === today);
+            
+            const totalToday = todaySales.reduce((sum, s) => sum + s.total, 0);
+            const totalHistorical = state.sales.reduce((sum, s) => sum + s.total, 0);
+
+            let html = `
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
+                    <div class="bg-gradient-to-br from-brand-500 to-brand-700 rounded-xl p-6 text-white shadow-md">
+                        <h3 class="text-brand-100 font-medium mb-1">Ventas Hoy</h3>
+                        <p class="text-4xl font-bold">$${totalToday.toLocaleString()}</p>
+                        <p class="text-sm mt-2 opacity-80">${todaySales.length} transacciones registradas</p>
+                    </div>
+                    <div class="bg-white border border-slate-200 rounded-xl p-6 shadow-sm">
+                        <h3 class="text-slate-500 font-medium mb-1">Ventas Históricas Totales</h3>
+                        <p class="text-4xl font-bold text-slate-800">$${totalHistorical.toLocaleString()}</p>
+                        <p class="text-sm mt-2 text-slate-400">Todo el registro en base de datos</p>
+                    </div>
+                </div>
+
+                <div class="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden">
+                    <div class="p-4 border-b border-slate-200 bg-slate-50">
+                        <h3 class="font-bold text-slate-800">Últimas 10 Transacciones</h3>
+                    </div>
+                    <table class="w-full text-left border-collapse">
+                        <thead>
+                            <tr class="text-slate-500 text-sm border-b border-slate-100">
+                                <th class="p-4">Fecha/Hora</th>
+                                <th class="p-4">Vendedor</th>
+                                <th class="p-4">Sección</th>
+                                <th class="p-4 text-right">Total</th>
+                            </tr>
+                        </thead>
+                        <tbody class="divide-y divide-slate-100">
+            `;
+
+            const latestSales = [...state.sales].sort((a,b) => b.timestamp - a.timestamp).slice(0, 10);
+            
+            if(latestSales.length === 0) {
+                html += `<tr><td colspan="4" class="p-8 text-center text-slate-400">No hay ventas registradas.</td></tr>`;
+            } else {
+                latestSales.forEach(s => {
+                    const cat = state.categories.find(c => c.id === s.categoryId) || {name: 'N/A'};
+                    html += `
+                        <tr class="text-sm hover:bg-slate-50">
+                            <td class="p-4 text-slate-500">${s.date}</td>
+                            <td class="p-4 font-medium">${s.sellerName}</td>
+                            <td class="p-4"><span class="bg-slate-100 px-2 py-1 rounded">${cat.name}</span></td>
+                            <td class="p-4 text-right font-bold text-green-600">$${s.total.toLocaleString()}</td>
+                        </tr>
+                    `;
+                });
+            }
+            html += `</tbody></table></div>`;
+            return html;
         };
 
         window.openAuditModal = () => {
-            let catOpts = '<option value="all">Todas las Secciones</option>' + state.categories.map(c => `<option value="${c.id}">${c.name}</option>`).join('');
-            let sellOpts = '<option value="all">Todos los Vendedores</option>' + state.users.filter(u=>u.role==='seller').map(u => `<option value="${u.id}">${u.username}</option>`).join('');
+            let catOptions = state.categories.map(c => `<option value="${c.id}">${c.name}</option>`).join('');
+            let sellerOptions = state.users.filter(u=>u.role==='seller').map(s => `<option value="${s.id}">${s.username}</option>`).join('');
+
             window.openModal(`
-                <div class="flex justify-between items-center mb-4"><h3 class="text-xl font-bold">Auditoría Avanzada</h3><button onclick="window.closeModal()" class="text-slate-400 hover:text-slate-600"><i class="fa-solid fa-times text-xl"></i></button></div>
+                <div class="flex justify-between items-center mb-4">
+                    <h3 class="text-xl font-bold text-slate-800">Auditoría y Reportes (PDF)</h3>
+                    <button onclick="window.closeModal()" class="text-slate-400 hover:text-slate-600"><i class="fa-solid fa-times"></i></button>
+                </div>
                 <div class="space-y-4">
-                    <div><label class="block text-sm mb-1">Tipo</label><select id="audit-type" class="w-full px-3 py-2 border rounded bg-white outline-none" onchange="window.toggleAuditFields()"><option value="inventory">Existencias de Inventario</option><option value="sales">Historial de Ventas</option></select></div>
-                    <div id="audit-time-container" class="hidden"><label class="block text-sm mb-1">Periodo</label><select id="audit-time" class="w-full px-3 py-2 border rounded bg-white outline-none"><option value="today">Hoy</option><option value="week">Esta Semana</option><option value="month">Este Mes</option><option value="all">Histórico Completo</option></select></div>
-                    <div><label class="block text-sm mb-1">Sección</label><select id="audit-cat" class="w-full px-3 py-2 border rounded bg-white outline-none" onchange="window.filterAuditSellers()">${catOpts}</select></div>
-                    <div id="audit-seller-container" class="hidden"><label class="block text-sm mb-1">Vendedor</label><select id="audit-seller" class="w-full px-3 py-2 border rounded bg-white outline-none">${sellOpts}</select></div>
-                    <div class="flex justify-end gap-2 mt-6"><button onclick="window.closeModal()" class="px-4 py-2 bg-slate-100 rounded">Cancelar</button><button onclick="window.executeAuditPDF()" class="px-4 py-2 bg-slate-800 text-white rounded"><i class="fa-solid fa-file-pdf"></i> Descargar</button></div>
+                    <div>
+                        <label class="block text-sm font-medium mb-1">Tipo de Auditoría</label>
+                        <select id="audit-type" class="w-full px-3 py-2 border border-slate-300 rounded-lg outline-none" onchange="window.toggleAuditFilters()">
+                            <option value="inventory">Existencias de Inventario (Actual)</option>
+                            <option value="sales">Historial de Ventas</option>
+                        </select>
+                    </div>
+                    
+                    <div id="audit-sales-filters" class="hidden space-y-4 bg-slate-50 p-4 rounded-lg border border-slate-200">
+                        <div>
+                            <label class="block text-sm font-medium mb-1">Periodo</label>
+                            <select id="audit-time" class="w-full px-3 py-2 border border-slate-300 rounded-lg outline-none">
+                                <option value="today">Hoy</option>
+                                <option value="week">Última Semana</option>
+                                <option value="month">Último Mes</option>
+                                <option value="all">Todo el Histórico</option>
+                            </select>
+                        </div>
+                        <div>
+                            <label class="block text-sm font-medium mb-1">Filtrar por Categoría</label>
+                            <select id="audit-cat" class="w-full px-3 py-2 border border-slate-300 rounded-lg outline-none">
+                                <option value="all">Todas las Categorías</option>
+                                ${catOptions}
+                            </select>
+                        </div>
+                        <div>
+                            <label class="block text-sm font-medium mb-1">Filtrar por Vendedor</label>
+                            <select id="audit-seller" class="w-full px-3 py-2 border border-slate-300 rounded-lg outline-none">
+                                <option value="all">Todos los Vendedores</option>
+                                ${sellerOptions}
+                            </select>
+                        </div>
+                    </div>
+
+                    <button onclick="window.generateAuditPDF()" class="w-full bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-3 rounded-lg flex justify-center items-center gap-2 shadow-md transition-all">
+                        <i class="fa-solid fa-download"></i> Descargar PDF
+                    </button>
                 </div>
             `);
         };
-        window.toggleAuditFields = () => {
-            const isSales = document.getElementById('audit-type').value === 'sales';
-            document.getElementById('audit-time-container').classList.toggle('hidden', !isSales);
-            document.getElementById('audit-seller-container').classList.toggle('hidden', !isSales);
-        };
-        window.filterAuditSellers = () => {
-            const catId = document.getElementById('audit-cat').value;
-            document.getElementById('audit-seller').innerHTML = '<option value="all">Todos los Vendedores</option>' + 
-                state.users.filter(u => u.role==='seller' && (catId==='all' || u.categoryId===catId)).map(u => `<option value="${u.id}">${u.username}</option>`).join('');
-        };
 
-        window.executeAuditPDF = () => {
+        window.toggleAuditFilters = () => {
             const type = document.getElementById('audit-type').value;
-            const catId = document.getElementById('audit-cat').value;
-            if(!window.jspdf) return window.showToast('Librería PDF no cargada', 'error');
-            const { jsPDF } = window.jspdf; const doc = new jsPDF(); const today = new Date().toLocaleDateString('es-CO');
-            
-            if(type === 'inventory') {
-                doc.text("Stockia - Auditoría de Inventario", 14, 20); doc.setFontSize(10); doc.text(`Generado: ${today}`, 14, 28);
-                let prods = state.products; let total = 0;
-                if(catId!=='all') prods = prods.filter(p=>p.categoryId===catId);
-                const table = prods.map(p => { const v=p.price*p.stock; total+=v; return [p.sku, p.name, formatMoney(p.price), p.stock, formatMoney(v)]; });
-                doc.text(`Valoración Total: ${formatMoney(total)}`, 14, 34);
-                doc.autoTable({ startY:40, head: [['SKU', 'Nombre', 'Precio', 'Stock', 'Valoración']], body: table });
-                doc.save(`auditoria_inv_stockia_${today}.pdf`);
-            } else {
-                const sId = document.getElementById('audit-seller').value; const time = document.getElementById('audit-time').value;
-                doc.text("Stockia - Auditoría de Ventas", 14, 20); doc.setFontSize(10); doc.text(`Generado: ${today}`, 14, 28);
-                let sales = state.sales;
-                if(time!=='all') { const d = new Date(); if(time==='today') d.setHours(0,0,0,0); else if(time==='week') d.setDate(d.getDate()-7); else if(time==='month') d.setMonth(d.getMonth()-1); sales = sales.filter(s=>new Date(s.date)>=d); }
-                if(catId!=='all') { const vSells = state.users.filter(u=>u.categoryId===catId).map(u=>u.id); sales = sales.filter(s=>vSells.includes(s.sellerId)); }
-                if(sId!=='all') sales = sales.filter(s=>s.sellerId===sId);
-                
-                let tot=0; const tData = [];
-                sales.forEach(s => { tot+=s.total; tData.push([formatDate(s.date), state.users.find(u=>u.id===s.sellerId)?.username, s.items.map(i=>`${i.qty}x ${i.name}`).join(', '), formatMoney(s.total)]); });
-                doc.text(`Total Periodo: ${formatMoney(tot)} | Transacciones: ${sales.length}`, 14, 34);
-                doc.autoTable({ startY:40, head: [['Fecha', 'Vendedor', 'Artículos', 'Total']], body: tData });
-                doc.save(`auditoria_ventas_stockia_${today}.pdf`);
-            }
-            window.closeModal(); window.showToast('Auditoría PDF Descargada');
+            const filters = document.getElementById('audit-sales-filters');
+            if(type === 'sales') filters.classList.remove('hidden');
+            else filters.classList.add('hidden');
         };
 
-        window.generateDailyClose = () => {
-            const todayStr = new Date().toLocaleDateString('es-CO');
-            const todaysSales = state.sales.filter(s => new Date(s.date).toLocaleDateString('es-CO') === todayStr);
-            const total = todaysSales.reduce((sum, s) => sum + s.total, 0);
-            if (window.jspdf) {
-                const { jsPDF } = window.jspdf; const doc = new jsPDF();
-                doc.setFontSize(18); doc.text("Stockia - Cierre Diario", 14, 20); doc.setFontSize(12); doc.text(`Fecha: ${todayStr} | Total: ${formatMoney(total)}`, 14, 30);
-                doc.autoTable({ startY:38, head:[['Hora', 'Vendedor', 'Total']], body: todaysSales.map(s=>[new Date(s.date).toLocaleTimeString(), state.users.find(u=>u.id===s.sellerId)?.username, formatMoney(s.total)]) });
-                doc.save(`cierre_diario_stockia_${todayStr.replace(/\//g,'-')}.pdf`);
+        window.generateAuditPDF = () => {
+            const type = document.getElementById('audit-type').value;
+            const { jsPDF } = window.jspdf;
+            const doc = new jsPDF();
+            const now = new Date();
+            const dateStr = now.toLocaleDateString() + ' ' + now.toLocaleTimeString();
+
+            doc.setFontSize(20);
+            doc.text("STOCKIA - Reporte de Auditoría", 14, 20);
+            doc.setFontSize(10);
+            doc.setTextColor(100);
+            doc.text(`Generado el: ${dateStr}`, 14, 28);
+            doc.text(`Generado por: ${state.currentUser.username}`, 14, 33);
+
+            if(type === 'inventory') {
+                doc.text("Tipo: Existencias de Inventario Actual", 14, 38);
+                
+                let totalValue = 0;
+                let tableData = [];
+                
+                state.products.forEach(p => {
+                    const cat = state.categories.find(c => c.id === p.categoryId)?.name || 'N/A';
+                    const val = p.price * p.stock;
+                    totalValue += val;
+                    tableData.push([p.name, cat, `$${p.price.toLocaleString()}`, p.stock, `$${val.toLocaleString()}`]);
+                });
+
+                doc.autoTable({
+                    startY: 45,
+                    head: [['Producto', 'Categoría', 'Precio Unit.', 'Stock', 'Valor Total']],
+                    body: tableData,
+                    theme: 'grid',
+                    headStyles: { fillColor: [37, 99, 235] }
+                });
+
+                const finalY = doc.lastAutoTable.finalY || 45;
+                doc.setFontSize(12);
+                doc.setTextColor(0);
+                doc.text(`Valoración Total del Inventario: $${totalValue.toLocaleString()}`, 14, finalY + 10);
+
+            } else {
+                // Ventas
+                const timeFilter = document.getElementById('audit-time').value;
+                const catFilter = document.getElementById('audit-cat').value;
+                const sellerFilter = document.getElementById('audit-seller').value;
+
+                doc.text(`Tipo: Historial de Ventas`, 14, 38);
+                doc.text(`Filtros: Periodo(${timeFilter}), Categ(${catFilter}), Vendedor(${sellerFilter})`, 14, 43);
+
+                let filteredSales = state.sales.filter(s => {
+                    let match = true;
+                    // Filtro Vendedor/Categoria
+                    if(catFilter !== 'all' && s.categoryId !== catFilter) match = false;
+                    if(sellerFilter !== 'all' && s.sellerId !== sellerFilter) match = false;
+                    
+                    // Filtro Tiempo
+                    const sDate = new Date(s.timestamp);
+                    if(timeFilter === 'today') {
+                        if(sDate.toLocaleDateString() !== now.toLocaleDateString()) match = false;
+                    } else if(timeFilter === 'week') {
+                        const weekAgo = new Date(); weekAgo.setDate(weekAgo.getDate() - 7);
+                        if(sDate < weekAgo) match = false;
+                    } else if(timeFilter === 'month') {
+                        const monthAgo = new Date(); monthAgo.setMonth(monthAgo.getMonth() - 1);
+                        if(sDate < monthAgo) match = false;
+                    }
+                    return match;
+                });
+
+                let totalSales = 0;
+                let tableData = [];
+
+                filteredSales.forEach(s => {
+                    const cat = state.categories.find(c => c.id === s.categoryId)?.name || 'N/A';
+                    totalSales += s.total;
+                    const itemsResumen = s.items.map(i => `${i.qty}x ${i.name}`).join(', ');
+                    tableData.push([s.date, s.sellerName, cat, itemsResumen, `$${s.total.toLocaleString()}`]);
+                });
+
+                doc.autoTable({
+                    startY: 50,
+                    head: [['Fecha/Hora', 'Vendedor', 'Categoría', 'Artículos', 'Total']],
+                    body: tableData,
+                    theme: 'grid',
+                    headStyles: { fillColor: [79, 70, 229] }
+                });
+
+                const finalY = doc.lastAutoTable.finalY || 50;
+                doc.setFontSize(14);
+                doc.setTextColor(0);
+                doc.text(`Total Recaudado en periodo: $${totalSales.toLocaleString()}`, 14, finalY + 12);
             }
-            window.showToast('Cierre Diario PDF Generado');
+
+            doc.save(`Stockia_Auditoria_${type}_${Date.now()}.pdf`);
+            window.closeModal();
+            window.showToast('Auditoría PDF generada y descargada');
+        };
+
+        // ==========================================
+        // VISTAS VENDEDOR (POS)
+        // ==========================================
+        const renderPOS = () => {
+            const seller = state.currentUser;
+            const myCat = state.categories.find(c => c.id === seller.categoryId);
+            const catName = myCat ? myCat.name : 'Sin sección asignada';
+
+            document.getElementById('header-actions').innerHTML = `
+                <button onclick="window.showSellerSales()" class="bg-indigo-100 hover:bg-indigo-200 text-indigo-700 px-4 py-2 rounded-lg font-medium shadow-sm transition-colors text-sm flex items-center gap-2">
+                    <i class="fa-solid fa-list-check"></i> Mis Ventas de Hoy
+                </button>
+            `;
+
+            let html = `
+                <div class="flex flex-col lg:flex-row gap-6 h-[calc(100vh-140px)]">
+                    <!-- Productos -->
+                    <div class="flex-1 flex flex-col bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden">
+                        <div class="p-4 border-b border-slate-200 bg-slate-50 flex justify-between items-center">
+                            <h3 class="font-bold text-slate-800">Productos Disponibles</h3>
+                            <span class="bg-brand-100 text-brand-700 px-3 py-1 rounded-full text-sm font-semibold">${catName}</span>
+                        </div>
+                        <div class="p-4 overflow-y-auto grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4" id="pos-products">
+                            ${generatePOSProducts(seller.categoryId)}
+                        </div>
+                    </div>
+
+                    <!-- Carrito -->
+                    <div class="w-full lg:w-96 bg-white rounded-xl shadow-sm border border-slate-200 flex flex-col h-full overflow-hidden">
+                        <div class="p-4 border-b border-slate-200 bg-slate-900 text-white flex justify-between items-center">
+                            <h3 class="font-bold">Orden Actual</h3>
+                            <button onclick="window.clearCart()" class="text-slate-400 hover:text-white text-sm"><i class="fa-solid fa-trash"></i> Vaciar</button>
+                        </div>
+                        <div class="flex-1 p-4 overflow-y-auto" id="pos-cart">
+                            ${generateCartHTML()}
+                        </div>
+                        <div class="p-4 border-t border-slate-200 bg-slate-50">
+                            <button onclick="window.checkout()" id="btn-checkout" class="w-full bg-green-600 hover:bg-green-700 text-white font-bold py-4 rounded-xl shadow-lg transition-transform active:scale-95 flex justify-between items-center px-6">
+                                <span>Cobrar</span>
+                                <span class="text-xl" id="cart-total-display">$0</span>
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            `;
+            return html;
+        };
+
+        const generatePOSProducts = (catId) => {
+            const prods = state.products.filter(p => p.categoryId === catId);
+            if(prods.length === 0) return `<div class="col-span-full text-center text-slate-400 mt-10">No hay productos en esta sección.</div>`;
+            
+            return prods.map(p => {
+                const outOfStock = p.stock === 0;
+                return `
+                    <div onclick="${outOfStock ? '' : `window.addToCart('${p.id}')`}" class="${outOfStock ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer hover:border-brand-500 hover:shadow-md'} bg-white border border-slate-200 rounded-xl p-4 transition-all flex flex-col h-full select-none">
+                        <div class="flex-1 mb-2">
+                            <h4 class="font-bold text-slate-800 leading-tight">${p.name}</h4>
+                            <p class="text-green-600 font-bold mt-1">$${p.price.toLocaleString()}</p>
+                        </div>
+                        <div class="text-xs text-slate-500 bg-slate-100 px-2 py-1 rounded inline-block w-max">
+                            Stock: <span class="${p.stock < 5 ? 'text-red-500 font-bold' : ''}">${p.stock}</span>
+                        </div>
+                    </div>
+                `;
+            }).join('');
+        };
+
+        const generateCartHTML = () => {
+            if(state.cart.length === 0) return `<div class="text-center text-slate-400 mt-10"><i class="fa-solid fa-basket-shopping text-4xl mb-3 opacity-50"></i><p>El carrito está vacío</p></div>`;
+            
+            let total = 0;
+            let html = '<ul class="space-y-3">';
+            state.cart.forEach((item, index) => {
+                const p = state.products.find(x => x.id === item.id);
+                const itemTotal = p.price * item.qty;
+                total += itemTotal;
+                html += `
+                    <li class="flex justify-between items-center border-b border-slate-100 pb-3">
+                        <div class="flex-1">
+                            <p class="font-bold text-slate-800 text-sm">${p.name}</p>
+                            <p class="text-xs text-slate-500">$${p.price.toLocaleString()} x ${item.qty}</p>
+                        </div>
+                        <div class="font-bold text-slate-800 w-20 text-right">$${itemTotal.toLocaleString()}</div>
+                        <button onclick="window.removeFromCart(${index})" class="text-red-400 hover:text-red-600 ml-3"><i class="fa-solid fa-times-circle"></i></button>
+                    </li>
+                `;
+            });
+            html += '</ul>';
+            
+            // Actualizar total del botón
+            setTimeout(() => {
+                const btnTotal = document.getElementById('cart-total-display');
+                if(btnTotal) btnTotal.innerText = `$${total.toLocaleString()}`;
+                
+                const btnCheckout = document.getElementById('btn-checkout');
+                if(btnCheckout) {
+                    if(state.cart.length === 0) btnCheckout.classList.add('opacity-50', 'pointer-events-none');
+                    else btnCheckout.classList.remove('opacity-50', 'pointer-events-none');
+                }
+            }, 0);
+            
+            return html;
+        };
+
+        window.addToCart = (id) => {
+            const p = state.products.find(x => x.id === id);
+            const cartItem = state.cart.find(x => x.id === id);
+            const currentQty = cartItem ? cartItem.qty : 0;
+            
+            if(currentQty + 1 > p.stock) return window.showToast('Stock insuficiente', 'error');
+            
+            if(cartItem) cartItem.qty++;
+            else state.cart.push({ id, qty: 1 });
+            
+            document.getElementById('pos-cart').innerHTML = generateCartHTML();
+        };
+
+        window.removeFromCart = (index) => {
+            state.cart.splice(index, 1);
+            document.getElementById('pos-cart').innerHTML = generateCartHTML();
+        };
+
+        window.clearCart = () => {
+            state.cart = [];
+            document.getElementById('pos-cart').innerHTML = generateCartHTML();
+        };
+
+        window.checkout = () => {
+            if(state.cart.length === 0) return;
+            
+            let total = 0;
+            const itemsToSave = [];
+            
+            // Descontar inventario
+            state.cart.forEach(item => {
+                const p = state.products.find(x => x.id === item.id);
+                p.stock -= item.qty;
+                total += p.price * item.qty;
+                itemsToSave.push({ id: p.id, name: p.name, qty: item.qty, price: p.price });
+            });
+            
+            // Registrar Venta
+            const now = new Date();
+            state.sales.push({
+                id: generateId(),
+                sellerId: state.currentUser.id,
+                sellerName: state.currentUser.username,
+                categoryId: state.currentUser.categoryId,
+                items: itemsToSave,
+                total: total,
+                date: now.toLocaleDateString() + ' ' + now.toLocaleTimeString(),
+                timestamp: now.getTime()
+            });
+            
+            state.cart = [];
+            window.showToast('Venta registrada con éxito');
+            window.loadView('seller', 'pos'); // Recargar para actualizar stock visual
         };
 
         window.showSellerSales = () => {
-            const todayStr = new Date().toLocaleDateString('es-CO');
-            const mySales = state.sales.filter(s => s.sellerId === state.currentUser.id && new Date(s.date).toLocaleDateString('es-CO') === todayStr);
+            const seller = state.currentUser;
+            const today = new Date().toLocaleDateString();
+            const mySales = state.sales.filter(s => s.sellerId === seller.id && new Date(s.timestamp).toLocaleDateString() === today);
+            
             const total = mySales.reduce((sum, s) => sum + s.total, 0);
-            let trs = mySales.length ? mySales.map(s => `<tr><td class="py-2 text-sm">${new Date(s.date).toLocaleTimeString()}</td><td class="py-2 text-sm font-bold text-brand-600 text-right">${formatMoney(s.total)}</td></tr>`).join('') : `<tr><td colspan="2" class="py-4 text-center text-slate-500">Sin ventas hoy</td></tr>`;
-            window.openModal(`
-                <div class="flex justify-between items-center mb-4"><h3 class="text-xl font-bold">Mis Ventas Hoy</h3><button onclick="window.closeModal()" class="text-slate-400"><i class="fa-solid fa-times text-xl"></i></button></div>
-                <div class="bg-indigo-50 border border-indigo-100 rounded-xl p-5 mb-4 text-center"><p class="text-xs text-indigo-600 font-bold uppercase mb-1">Total Recaudado</p><p class="text-3xl font-black text-indigo-900">${formatMoney(total)}</p></div>
-                <table class="w-full"><thead><tr class="text-xs uppercase text-slate-500 border-b"><th class="text-left pb-2">Hora</th><th class="text-right pb-2">Monto</th></tr></thead><tbody>${trs}</tbody></table>
-            `);
+
+            let html = `
+                <div class="flex justify-between items-center mb-4">
+                    <h3 class="text-xl font-bold">Mis Ventas (Hoy)</h3>
+                    <button onclick="window.closeModal()" class="text-slate-400 hover:text-slate-600"><i class="fa-solid fa-times"></i></button>
+                </div>
+                <div class="bg-indigo-50 border border-indigo-100 rounded-lg p-4 mb-4 flex justify-between items-center">
+                    <div>
+                        <p class="text-sm text-indigo-600 font-medium">Recaudado Hoy</p>
+                        <p class="text-2xl font-bold text-indigo-900">$${total.toLocaleString()}</p>
+                    </div>
+                    <i class="fa-solid fa-sack-dollar text-3xl text-indigo-200"></i>
+                </div>
+                <div class="max-h-64 overflow-y-auto">
+                    <ul class="space-y-2">
+            `;
+
+            if(mySales.length === 0) {
+                html += `<li class="text-center text-slate-400 py-4">Aún no tienes ventas hoy.</li>`;
+            } else {
+                mySales.reverse().forEach(s => {
+                    const time = new Date(s.timestamp).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'});
+                    html += `
+                        <li class="bg-slate-50 border border-slate-100 rounded p-3 flex justify-between items-center">
+                            <div>
+                                <p class="text-xs text-slate-400 mb-1"><i class="fa-regular fa-clock"></i> ${time}</p>
+                                <p class="text-sm font-medium text-slate-700">${s.items.length} artículo(s)</p>
+                            </div>
+                            <span class="font-bold text-green-600">$${s.total.toLocaleString()}</span>
+                        </li>
+                    `;
+                });
+            }
+            html += `</ul></div>`;
+            window.openModal(html);
         };
 
-        let timeCheckerInterval;
-        const startTimeChecker = () => {
-            if(timeCheckerInterval) clearInterval(timeCheckerInterval);
-            timeCheckerInterval = setInterval(() => {
-                if(new Date().getHours() >= 17 && !state.closingNotified && state.currentUser?.role === 'admin') {
-                    window.showToast('Son las 5:00 PM. Es hora de realizar el cierre diario.', 'warning');
-                    state.closingNotified = true;
-                }
-            }, 60000);
+        // --- INICIALIZACIÓN VISUAL ---
+        window.onload = () => {
+            // Simulamos la carga premium y conexión (2.5 segundos)
+            setTimeout(() => {
+                const loader = document.getElementById('loading-screen');
+                loader.classList.add('fade-out');
+                
+                setTimeout(() => {
+                    loader.classList.add('hidden');
+                    document.getElementById('main-content').classList.remove('hidden');
+                    document.getElementById('login-view').classList.remove('hidden');
+                }, 700); // Esperar que termine la transición CSS fade-out
+                
+            }, 2500);
         };
 
-        // Initialize Firebase when page loads
-        document.addEventListener('DOMContentLoaded', initFirebase);
     </script>
 </body>
 </html>
